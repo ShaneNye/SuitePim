@@ -1,0 +1,408 @@
+/* =========================
+   Base / Tokens
+========================= */
+:root {
+  --brand: #0081AB;
+  --brand-dark: #026aa7;
+  --brand-darker: #005f86;
+  --ink: #333;
+  --ink-soft: #555;
+  --bg-soft: #f7f9fb;
+  --line: #e0e0e0;
+  --shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+  --radius: 0.5rem;
+  --radius-sm: 0.35rem;
+  --radius-lg: 0.75rem;
+  --focus: 0 0 0 3px rgba(0, 129, 171, 0.25);
+  --row-select: #e0f7fa;
+  --parent: #FFD700;
+  --tool-head: #333;
+  --table-head-border: #006F91;
+}
+
+/* =========================
+   Loading (fetch phase)
+========================= */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'ProximaNova', sans-serif;
+  color: var(--brand);
+  transition: opacity 0.5s ease;
+  margin: 2rem 0;
+}
+
+.spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 0.5rem solid #f3f3f3;
+  border-top: 0.5rem solid var(--brand);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  font-size: 1.1rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* =========================
+   Buttons
+========================= */
+button {
+  background-color: var(--brand);
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1rem;
+  margin: 0.25rem;
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+button:hover {
+  background-color: var(--brand-dark);
+  transform: translateY(-1px);
+}
+
+button:active {
+  background-color: var(--brand-darker);
+  transform: translateY(0);
+}
+
+button:disabled {
+  background-color: #b0bec5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Compact icon button (e.g., filter remove) */
+.filter-remove-btn {
+  padding: 0.2rem 0.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* =========================
+   Panels
+========================= */
+.panel-parent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  max-height: 35rem;
+  overflow-y: auto;
+  padding: 1rem;
+  box-sizing: border-box;
+  margin: 0rem 2rem 0rem 4rem;
+  scroll-padding: 0.5rem;
+}
+
+.filter-panel-container {
+  flex: 1 1 40%;
+  min-width: 18rem;
+  max-width: 48%;
+  margin: 0;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  background: #fff;
+}
+
+.filter-panel-header {
+  background-color: var(--brand);
+  color: white;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.filter-panel-header span {
+  transition: transform 0.3s ease;
+}
+
+.filter-panel-header.collapsed span {
+  transform: rotate(-90deg);
+}
+
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background-color: var(--bg-soft);
+  padding: 1rem 1.5rem;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  max-height: 20rem;
+  overflow-y: auto;
+}
+
+.filter-panel.collapsed {
+  max-height: 0;
+  padding: 0 1.5rem;
+  overflow: hidden;
+}
+
+/* Column filter bits (kept for any legacy UI that still uses them) */
+.column-filter {
+  display: flex;
+  flex-direction: column;
+  min-width: 10rem;
+  max-width: 15rem;
+  flex: 1 1 auto;
+}
+
+.column-filter label:first-child {
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.column-filter input[type="text"] {
+  padding: 0.5rem 0.75rem;
+  border: 0.0625rem solid #ccc;
+  border-radius: 0.25rem;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.column-filter input[type="checkbox"] {
+  margin-right: 0.25rem;
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+.column-filter label:nth-child(4) {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+/* =========================
+   Selects / Inputs (shared)
+========================= */
+select.theme-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+select.theme-select:focus,
+#filter-table select:focus,
+#filter-table input:focus {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* Filter table cells align nicely */
+#filter-table th, #filter-table td {
+  vertical-align: middle;
+}
+
+/* =========================
+   Table (CSV)
+========================= */
+#table-data {
+  /* helps horizontal scroll on narrow screens */
+  overflow-x: auto;
+}
+
+.csv-table {
+  width: 90%;
+  margin: 2rem auto;
+  border-collapse: collapse;
+  font-family: 'ProximaNova', sans-serif;
+  font-size: .8rem;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
+  /* allow sticky header to work when container scrolls */
+  position: relative;
+}
+
+.csv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.csv-table th {
+  background-color: var(--brand);
+  color: white;
+  font-weight: bold;
+  text-align: left;
+  padding: 0.75rem 1rem;
+  border-bottom: 0.125rem solid var(--table-head-border);
+}
+
+.csv-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 0.0625rem solid var(--line);
+  color: var(--ink);
+  vertical-align: top;
+}
+
+/* Zebra rows */
+.csv-table tr:nth-child(even) td {
+  background-color: #f9f9f9;
+}
+
+/* Hover row */
+.csv-table tr:hover td {
+  background-color: #e6f2f7;
+  transition: background-color 0.15s ease-in-out;
+}
+
+/* Special header for tool-generated columns */
+.csv-table th.tool-column-header {
+  background-color: var(--tool-head);
+  color: #fff;
+  font-weight: bold;
+}
+
+/* Editable cells: clearer focus */
+.csv-table td[contenteditable="true"] {
+  outline: none;
+  cursor: text;
+}
+
+.csv-table td[contenteditable="true"]:focus {
+  box-shadow: inset 0 0 0 2px var(--brand);
+  background: #f0fbff;
+}
+
+/* Optional class if you ever toggle row-selected via CSS (JS already colors) */
+.csv-table tr.row-selected td {
+  background: var(--row-select);
+}
+
+/* Parent rows (JS also sets this inline; class gives CSS fallback) */
+.csv-table tr.is-parent td {
+  background-color: var(--parent);
+}
+
+/* =========================
+   Local "Building table…" overlay
+   (used by displayJSONTable(..., { showBusy: true }))
+========================= */
+.table-build-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.7);
+  z-index: 5;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.table-build-overlay__inner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+/* Reuse the same spinner style inside overlay */
+.table-build-overlay .spinner {
+  margin: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-width: 0.35rem;
+  border-top-color: var(--brand);
+}
+
+.is-hidden { display: none !important; }
+
+.fade-in {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+.fade-in.show {
+  opacity: 1;
+}
+
+
+/* =========================
+   Responsive
+========================= */
+@media (max-width: 1024px) {
+  .csv-table th, .csv-table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .filter-panel-container {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .panel-parent {
+    flex-direction: column;
+    max-height: none;
+    margin: 0 1rem;
+  }
+
+  .filter-panel {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .column-filter {
+    max-width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .csv-table {
+    width: 100%;
+    font-size: 0.85rem;
+  }
+
+  .csv-table th, .csv-table td {
+    padding: 0.5rem 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .csv-table {
+    font-size: 0.8rem;
+  }
+
+  .csv-table th, .csv-table td {
+    padding: 0.4rem 0.4rem;
+  }
+}

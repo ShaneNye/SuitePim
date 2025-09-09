@@ -1,0 +1,22 @@
+﻿# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+*.local
+
+# Electron build outputs
+/dist
+/release
+/win-unpacked
+/*.exe
+/*.dmg
+/*.AppImage
+*.blockmap
+latest*.yml
+
+# OS junk
+.DS_Store
+Thumbs.db

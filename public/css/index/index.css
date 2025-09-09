@@ -1,0 +1,135 @@
+/* Reset & Base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+html {
+  font-size: 16px; /* Base = 1rem */
+}
+
+body {
+  background: #f9f9f9;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 1rem;
+}
+
+/* Portal Container */
+.portal {
+  background: #fff;
+  padding: 2.5rem 2rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 0.25rem 1.25rem rgba(0, 0, 0, 0.08);
+  text-align: center;
+  width: 20rem; /* ~320px */
+  max-width: 100%;
+}
+
+/* Branding */
+.portal img {
+  width: 11rem;
+  margin-bottom: 1rem;
+}
+
+.portal h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: black;
+  margin-bottom: 0.25rem;
+}
+
+.portal h2 {
+  font-size: 1rem;
+  font-weight: 400;
+  color: #0081ab;
+  margin-bottom: 1.5rem;
+}
+
+/* Inputs */
+.portal input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 0.063rem solid #ddd;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.portal select {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 0.063rem solid #ddd;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease;
+}
+
+.portal input:focus {
+  outline: none;
+  border-color: #0081ab;
+  box-shadow: 0 0 0 0.125rem rgba(0, 129, 171, 0.15);
+}
+
+/* Button */
+.portal button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #0081ab;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.portal button:hover {
+  background: #006a8a;
+}
+
+.portal button:active {
+  background: #00556c;
+}
+
+/* Responsive Tweaks */
+@media (max-width: 30rem) { /* ~480px */
+  html {
+    font-size: 14px; /* Slightly smaller base */
+  }
+
+  .portal {
+    padding: 2rem 1.5rem;
+    width: 100%;
+  }
+
+  .portal img {
+    width: 9rem;
+  }
+
+  .portal h1 {
+    font-size: 1.25rem;
+  }
+
+  .portal h2 {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 20rem) { /* ~320px */
+  html {
+    font-size: 12px; /* Compact scaling */
+  }
+
+  .portal {
+    padding: 1.5rem 1rem;
+  }
+}

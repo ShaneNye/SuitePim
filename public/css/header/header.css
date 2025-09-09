@@ -1,0 +1,44 @@
+@font-face {
+    font-family: 'ProximaNova';
+    src: url('/fonts/proximanova_regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+* {
+    padding: 0px;
+    margin: 0px;
+    font-family: 'ProximaNova', sans-serif;
+}
+
+.header {
+    background-color: #0081AB;
+    color: white;
+    position: relative;
+    box-shadow:
+        inset 0 -3px 6px rgba(0, 0, 0, 0.2),
+        0 4px 8px rgba(0, 0, 0, 0.15);
+
+    background: linear-gradient(180deg, #0081AB 0%, #006F91 100%);
+
+    .title {
+        width: fit-content;
+        text-align: center;
+        padding: 1rem;
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+
+        hr {
+            margin: .5rem;
+            border: 2px solid #FFD700;
+            border-radius: 5px;;
+        }
+
+    }
+
+    .page-title {
+        text-align: right;
+    }
+
+}
+
