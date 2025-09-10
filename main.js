@@ -4,7 +4,8 @@ import { fork } from "child_process";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
-import { autoUpdater } from "electron-updater"; // ⬅️ updater
+import updaterPkg from "electron-updater";
+const { autoUpdater } = updaterPkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,7 +83,7 @@ function setupAutoUpdater() {
 
 app.whenReady().then(() => {
   // Ensure logs directory exists
-  const logDir = path.join(__dirname, "logs");
+const logDir = path.join(app.getPath("userData"), "logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
   const logFile = fs.createWriteStream(path.join(logDir, "server.log"), {

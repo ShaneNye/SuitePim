@@ -1,0 +1,7 @@
+Check git token in terminal :  echo $env:GH_TOKEN
+
+publish release in vs code :  npm run publish
+
+create new exe locally : npm run dist
+
+run dev env : npm run 
