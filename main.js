@@ -32,7 +32,7 @@ function createWindow() {
 function setupAutoUpdater() {
   // Recommended on Windows so notifications & identity work correctly
   if (process.platform === "win32") {
-    app.setAppUserModelId("com.yourcompany.yourapp"); // match build.appId later
+    app.setAppUserModelId("com.sussexbeds.suitepim"); // match build.appId later
   }
 
   // Sensible defaults
