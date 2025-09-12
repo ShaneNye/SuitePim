@@ -1,6 +1,6 @@
 {
   "name": "suitepim",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "type": "module",
   "main": "main.js",
   "description": "SuitePim Desktop App",
@@ -76,11 +76,12 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": false
     },
-    "mac": {
-      "category": "public.app-category.productivity",
-      "target": ["dmg"],
-      "icon": "public/assets/moon-man-logo.icns"
-    },
+"mac": {
+  "category": "public.app-category.productivity",
+  "target": ["dmg"],
+  "icon": "public/assets/moon-man-logo.icns",
+  "arch": ["x64", "arm64"]
+},
     "linux": {
       "target": ["AppImage"],
       "icon": "public/assets/moon-man-logo.png"
