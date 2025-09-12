@@ -1,4 +1,4 @@
-name: Build & Release
+name: Build & Release (Mac Only)
 
 on:
   push:
@@ -12,8 +12,9 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -25,15 +26,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build & Publish
+      - name: Build & Publish Mac Universal DMG
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual run → build Mac universal dmg as draft release"
-            npx electron-builder --mac dmg --arch universal --publish onTagOrDraft
+            echo "🔨 Manual run → build Mac universal dmg as draft release"
+            npx electron-builder --mac dmg --universal --publish onTagOrDraft
           else
-            echo "Tag push → normal publish (Mac universal dmg)"
-            npx electron-builder --mac dmg --arch universal -p always
+            echo "🏷 Tag push → build Mac universal dmg and publish"
+            npx electron-builder --mac dmg --universal -p always
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false   # disables Mac signing in CI
+          CSC_IDENTITY_AUTO_DISCOVERY: false   # disables Mac code signing in CI
