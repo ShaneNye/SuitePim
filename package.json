@@ -1,6 +1,6 @@
 {
   "name": "suitepim",
-  "version": "1.0.2",
+  "version": "1.0.6",
   "type": "module",
   "main": "main.js",
   "description": "SuitePim Desktop App",
@@ -35,17 +35,22 @@
     "appId": "com.sussexbeds.suitepim",
     "productName": "SuitePim",
     "files": [
-  "public/**/*",
-  "SuiteScripts/**/*",
-  "main.js",
-  "server.js",
-  "users.js",
-  "fieldMap.js",
-  "package.json",
-  "!release/**",
-  "!dist/**",
-  "!win-unpacked/**",
-  "!**/*.map"
+      "public/**/*",
+      "SuiteScripts/**/*",
+      "main.js",
+      "public/fonts/**/*",
+      "server.js",
+      "users.js",
+      "fieldMap.js",
+      "package.json",
+      "!release/**",
+      "!dist/**",
+      "!win-unpacked/**",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      "latest.yml",
+      "*.blockmap"
     ],
     "directories": {
       "output": "release"
@@ -61,12 +66,10 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         }
       ],
-      "icon": "icon.ico"
+      "icon": "public/assets/moon-man-logo.ico"
     },
     "nsis": {
       "oneClick": true,
@@ -75,14 +78,10 @@
     },
     "mac": {
       "category": "public.app-category.productivity",
-      "target": [
-        "dmg"
-      ]
+      "target": ["dmg"]
     },
     "linux": {
-      "target": [
-        "AppImage"
-      ]
+      "target": ["AppImage"]
     }
   }
 }

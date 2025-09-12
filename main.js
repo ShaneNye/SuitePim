@@ -17,6 +17,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 2100,
     height: 900,
+     icon: path.join(__dirname, "public", "assets", "moon-man-logo.ico"),
     webPreferences: {
       nodeIntegration: false, // keep secure
       contextIsolation: true,
@@ -32,7 +33,7 @@ function createWindow() {
 function setupAutoUpdater() {
   // Recommended on Windows so notifications & identity work correctly
   if (process.platform === "win32") {
-    app.setAppUserModelId("com.yourcompany.yourapp"); // match build.appId later
+    app.setAppUserModelId("com.sussexbeds.suitepim"); // match build.appId later
   }
 
   // Sensible defaults

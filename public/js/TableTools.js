@@ -1,38 +1,64 @@
-// TableTools.js
+function recalcRow(row, changedField = null) {
+  const updated = { ...row };
 
-// --- Tool: Retail Price ---
-function addRetailPriceTool(data) {
-    return data.map(row => {
-        const base = parseFloat(row["Base Price"]);
-        if (!isNaN(base)) {
-            // Calculate (BASE PRICE / 100) * 120
-            row["Retail Price"] = ((base / 100) * 120).toFixed(0);
-        } else {
-            row["Retail Price"] = "";
-        }
-        return row;
-    });
+  const VAT = 0.2; // 20% VAT
+  let P = parseFloat(updated["Purchase Price"]) || 0;
+  let B = parseFloat(updated["Base Price"]) || 0;
+  let R = parseFloat(updated["Retail Price"]) || 0;
+  let M = parseFloat(updated["Margin"]) || 0;
+
+  switch (changedField) {
+    case "Purchase Price":
+      if (P > 0 && R > 0) {
+        M = R / P; // only recalc margin
+      }
+      break;
+
+    case "Base Price":
+      if (B > 0) {
+        R = B * (1 + VAT);
+        if (P > 0) M = R / P;
+      }
+      break;
+
+    case "Retail Price":
+      if (R > 0) {
+        B = R / (1 + VAT);
+        B = parseFloat(B.toFixed(2));
+        if (P > 0) M = R / P;
+      }
+      break;
+
+    case "Margin":
+      if (P > 0 && M > 0) {
+        R = P * M;
+        B = R / (1 + VAT);
+        B = parseFloat(B.toFixed(2));
+      }
+      break;
+
+    default:
+      if (B > 0) {
+        R = B * (1 + VAT);
+        if (P > 0) M = R / P;
+      }
+  }
+
+  updated["Purchase Price"] = P.toFixed(2);
+  updated["Base Price"] = B.toFixed(2);
+  updated["Retail Price"] = Math.round(R);
+  updated["Margin"] = M.toFixed(1);
+
+  return updated;
 }
 
-// --- Tool: Margin ---
-function addMarginTool(data) {
-    return data.map(row => {
-        const retail = parseFloat(row["Retail Price"]);
-        const purchase = parseFloat(row["Purchase Price"]);
 
-        if (!isNaN(retail) && !isNaN(purchase) && purchase > 0) {
-            // One decimal place
-            row["Margin"] = (retail / purchase).toFixed(1);
-        } else {
-            row["Margin"] = "";
-        }
-        return row;
-    });
-}
+// --- Tools (use recalcRow for consistency) ---
+function addRetailPriceTool(data) { return data.map(r => recalcRow(r)); }
+function addMarginTool(data)      { return data.map(r => recalcRow(r)); }
 
-// ✅ Attach globally so ProductData.js can use
+// ✅ Attach globally
+window.recalcRow = recalcRow;
 window.addRetailPriceTool = addRetailPriceTool;
 window.addMarginTool = addMarginTool;
-
-// ✅ Identify tool columns
 window.toolColumns = ["Retail Price", "Margin"];

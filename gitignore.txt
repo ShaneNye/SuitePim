@@ -15,7 +15,7 @@ yarn-error.log*
 /*.dmg
 /*.AppImage
 *.blockmap
-latest*.yml
+# ⬅️ keep latest.yml files so auto-updater can find them
 
 # OS junk
 .DS_Store

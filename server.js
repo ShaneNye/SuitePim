@@ -181,54 +181,69 @@ async function runNextJob() {
   const results = [];
   const { rows, user, envConfig, environment } = job;
 
-  // Clear, early log of the environment being used for this job
   console.log(`\n🌐 Environment: ${environment} (${envConfig.accountDash})`);
   console.log(`👤 User: ${user.username}`);
   console.log(`🧾 Records to send: ${rows.length}`);
 
   for (const row of rows) {
-    if (!jobs[jobId]) return; // cancelled
+    if (!jobs[jobId]) return; // cancelled mid-run
+
+    const rowResult = {
+      itemId: row["Item ID"],
+      status: "Pending",
+      response: {
+        main: null,
+        prices: [],
+        error: null,
+      },
+    };
+
     try {
       if (!row["Internal ID"]) {
-        results.push({
-          itemId: row["Item ID"] || "Unknown",
-          status: "Skipped",
-          reason: "Missing Internal ID",
-        });
+        rowResult.status = "Skipped";
+        rowResult.response = { reason: "Missing Internal ID" };
+        results.push(rowResult);
         continue;
       }
 
-      // ✅ Build payload from fieldMap and the row
+      // --- Build main payload ---
       const payload = {};
+      let basePriceVal;
+
       for (const field of fieldMap) {
         const value = row[field.name];
+        if (value === undefined || value === null || value === "") continue;
 
-        if (value !== undefined && value !== null && value !== "") {
-          if (field.fieldType === "List/Record") {
-            const internalId = row[`${field.name}_InternalId`] || value;
-            payload[field.internalid] = {
-              id: String(internalId),
-              refName: value,
-              type: field.internalid,
-            };
-          } else if (field.fieldType === "Currency") {
-            payload[field.internalid] = parseFloat(value) || 0;
-          } else if (field.fieldType === "Checkbox") {
-            payload[field.internalid] =
-              String(value).toLowerCase() === "true" || value === "1";
-          } else {
-            payload[field.internalid] = String(value);
-          }
+        if (field.name === "Base Price") {
+          const val = parseFloat(value);
+          if (!isNaN(val)) basePriceVal = val;
+          continue; // handled separately
+        }
+
+        if (field.fieldType === "List/Record") {
+          const internalId = row[`${field.name}_InternalId`] || value;
+          payload[field.internalid] = {
+            id: String(internalId),
+            refName: value,
+            type: field.internalid,
+          };
+        } else if (field.fieldType === "Currency") {
+          payload[field.internalid] = parseFloat(value) || 0;
+        } else if (field.fieldType === "Checkbox") {
+          payload[field.internalid] =
+            String(value).toLowerCase() === "true" || value === "1";
+        } else {
+          payload[field.internalid] = String(value);
         }
       }
 
       const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
       const { tokenId, tokenSecret } = user;
 
-      // Per-request log includes env tag
       console.log(`\n➡️ [${environment}] PATCH ${url}`);
       console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
 
+      // --- PATCH main record ---
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
@@ -240,37 +255,129 @@ async function runNextJob() {
       });
 
       const text = await response.text();
-      let data;
-      try { data = JSON.parse(text); } catch { data = text; }
+      try {
+        rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" };
+      } catch {
+        rowResult.response.main = text || { status: "No Content (204)" };
+      }
 
-      console.log(`⬅️ [${environment}] Response (${response.status}):\n`, JSON.stringify(data, null, 2));
+      console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
 
-      results.push({
-        itemId: row["Internal ID"],
-        status: response.status,
-        data,
-      });
+      // --- Handle Base Price update ---
+      if (basePriceVal !== undefined) {
+        const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
+
+        console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
+        const priceGetRes = await fetch(priceUrl, {
+          method: "GET",
+          headers: {
+            ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
+            "Content-Type": "application/json",
+          },
+        });
+
+        const priceGetText = await priceGetRes.text();
+        let priceGetData;
+        try {
+          priceGetData = JSON.parse(priceGetText);
+        } catch {
+          priceGetData = priceGetText;
+        }
+
+        if (Array.isArray(priceGetData?.items)) {
+          for (const item of priceGetData.items) {
+            const selfLink = item.links?.find((l) => l.rel === "self")?.href;
+            if (!selfLink) continue;
+
+            // ✅ PATCH only Base Price rows (pricelevel=1)
+            if (selfLink.includes("pricelevel=1")) {
+              const currentRes = await fetch(selfLink, {
+                method: "GET",
+                headers: {
+                  ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
+                  "Content-Type": "application/json",
+                },
+              });
+
+              const currentText = await currentRes.text();
+              let currentData;
+              try {
+                currentData = JSON.parse(currentText);
+              } catch {
+                currentData = currentText;
+              }
+
+              if (currentData.price !== basePriceVal) {
+                const patchBody = { price: basePriceVal };
+
+                console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
+                console.log("🔑 Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
+
+                const priceRes = await fetch(selfLink, {
+                  method: "PATCH",
+                  headers: {
+                    ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
+                    "Content-Type": "application/json",
+                    Prefer: "return=representation",
+                  },
+                  body: JSON.stringify(patchBody),
+                });
+
+                const priceText = await priceRes.text();
+                let priceData;
+                if (priceText && priceText.trim().length > 0) {
+                  try {
+                    priceData = JSON.parse(priceText);
+                  } catch {
+                    priceData = priceText;
+                  }
+                } else {
+                  priceData = { status: "No Content (204)" };
+                }
+
+                console.log(`⬅️ [${environment}] Price Response:`, priceData);
+
+                rowResult.response.prices.push({
+                  link: selfLink,
+                  newValue: basePriceVal,
+                  result: priceData,
+                });
+              } else {
+                console.log(`⚠️ Skipping ${selfLink}, already at ${basePriceVal}`);
+              }
+            }
+          }
+        } else {
+          console.warn("⚠️ Price GET did not return expected `items` array");
+          rowResult.response.prices.push({ error: "Unexpected GET response", data: priceGetData });
+        }
+      }
+
+      // ✅ Normalize final row status
+      if (rowResult.response.error) {
+        rowResult.status = "Error";
+        console.error(`❌ Error flagged for item ${rowResult.itemId}:`, rowResult.response.error);
+      } else if (rowResult.response.main || rowResult.response.prices.length > 0) {
+        rowResult.status = "Success";
+      } else {
+        rowResult.status = "Skipped";
+      }
     } catch (err) {
-      console.error(`❌ [${environment}] Error pushing item ${row["Internal ID"]}:`, err);
-      results.push({
-        itemId: row["Internal ID"],
-        status: "Error",
-        error: err.message,
-      });
+      rowResult.status = "Error";
+      rowResult.response.error = String(err);
+      console.error(`❌ Exception for item ${row["Item ID"]}:`, err);
     }
 
+    results.push(rowResult);
     job.processed++;
-    job.results = results;
   }
 
+  job.results = results;
   job.status = "completed";
   job.finishedAt = new Date();
-
-  // remove from queue and start next
   jobQueue.shift();
   runNextJob();
 }
-
 
 
 // enqueue job with the current env

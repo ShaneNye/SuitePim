@@ -21,6 +21,12 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* subtle depth */
 }
 
+.welcome h3 {
+    font-size: 1.8rem;
+    margin: 1rem 0;
+}
+
+
 .welcome h4 {
     font-size: 1.1rem;
     margin: 1rem 0;

@@ -16,12 +16,16 @@ const jsonUrl =
 const MAX_ROWS = 500;
 
 
+
+
+
 // ✅ List of tool-generated columns
 const toolColumns = ["Retail Price", "Margin"];
 
 let fullData = [];
 let filteredData = [];
 let displayedColumns = [];
+let baselineData = [];
 const listCache = {}; // cache for List/Record feeds
 
 // --- UTILS ---
@@ -53,19 +57,20 @@ async function loadJSONData() {
   container.appendChild(spinnerContainer);
 
   try {
-    // Fetch JSON
+    // --- 1) Fetch main JSON dataset
     const response = await fetch(jsonUrl);
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
     fullData = await response.json();
 
-    // Tool columns
+    // Apply tool columns
     if (typeof window.addRetailPriceTool === "function")
       fullData = window.addRetailPriceTool(fullData);
     if (typeof window.addMarginTool === "function")
       fullData = window.addMarginTool(fullData);
 
     filteredData = [...fullData];
+    baselineData = JSON.parse(JSON.stringify(fullData));
 
     const columns = Object.keys(fullData[0] || {});
     displayedColumns = [
@@ -73,9 +78,26 @@ async function loadJSONData() {
       ...toolColumns.filter((tc) => !columns.slice(0, 7).includes(tc)),
     ];
 
-    // Build panels (hidden until table is ready)
+    // --- 2) Preload all List/Record feeds
+    const preloadPromises = fieldMap
+      .filter((f) => f.fieldType === "List/Record" && f.jsonFeed)
+      .map(async (f) => {
+        try {
+          const res = await fetch(f.jsonFeed);
+          if (!res.ok) throw new Error(`Feed ${f.name} failed`);
+          const data = await res.json();
+          listCache[f.name] = data; // cache immediately
+        } catch (err) {
+          console.warn(`⚠️ Failed to preload options for ${f.name}:`, err);
+          listCache[f.name] = []; // fallback to empty
+        }
+      });
+
+    await Promise.all(preloadPromises);
+
+    // --- 3) Build panels (hidden until table is ready)
     const panelsParent = document.createElement("div");
-    panelsParent.classList.add("panel-parent", "is-hidden"); // <-- hidden until table loads
+    panelsParent.classList.add("panel-parent", "is-hidden");
     container.appendChild(panelsParent);
 
     await renderFilterPanel(columns, panelsParent);
@@ -84,38 +106,31 @@ async function loadJSONData() {
     renderUpdateButton(panelsParent);
     renderPushButton(panelsParent);
 
-    // Build table
+    // --- 4) Build table
     await displayJSONTable(filteredData);
 
     // Reveal panels
     panelsParent.classList.remove("is-hidden");
 
     // ✅ Fade out spinner smoothly
-    spinnerContainer.style.opacity = "1"; // ensure starting state
+    spinnerContainer.style.opacity = "1";
     spinnerContainer.style.transition = "opacity 0.5s ease";
-
     requestAnimationFrame(() => {
-      spinnerContainer.style.opacity = "0"; // fade out
+      spinnerContainer.style.opacity = "0";
     });
+    setTimeout(() => spinnerContainer.remove(), 600);
 
-    setTimeout(() => {
-      spinnerContainer.remove();
-    }, 600);
-
-    // Collapse panels by default (optional)
-    document
-      .querySelectorAll(".filter-panel")
+    // Collapse panels by default
+    document.querySelectorAll(".filter-panel")
       .forEach((panel) => panel.classList.add("collapsed"));
-    document
-      .querySelectorAll(".filter-panel-header")
+    document.querySelectorAll(".filter-panel-header")
       .forEach((header) => header.classList.add("collapsed"));
 
   } catch (error) {
-    console.error("Error fetching JSON:", error);
+    console.error("Error loading data:", error);
     spinnerMsg.textContent = "❌ Failed to load JSON data.";
   }
 }
-
 
 // --- FILTER PANEL (table-style with dynamic rows + remove buttons) ---
 async function renderFilterPanel(columns, parent) {
@@ -194,12 +209,10 @@ async function renderFilterPanel(columns, parent) {
     valueTd.style.padding = "0.25rem 0.5rem";
     row.appendChild(valueTd);
 
-    // helper to render proper value control for current field
     const renderValueControl = async () => {
       valueTd.innerHTML = "";
       const selectedFieldName = fieldSelect.value;
       if (!selectedFieldName) {
-        // nothing selected yet — show disabled input
         const input = document.createElement("input");
         input.type = "text";
         input.placeholder = "Select a field first";
@@ -216,7 +229,6 @@ async function renderFilterPanel(columns, parent) {
         select.classList.add("theme-select", "filter-value-select");
         select.dataset.field = selectedFieldName;
 
-        // Default option: All (no filter)
         const all = document.createElement("option");
         all.value = "";
         all.textContent = "All";
@@ -225,7 +237,7 @@ async function renderFilterPanel(columns, parent) {
         const options = await getListOptions(field);
         options.forEach((opt) => {
           const o = document.createElement("option");
-          o.value = opt["Name"]; // we compare by Name in filtering
+          o.value = opt["Name"];
           o.textContent = opt["Name"];
           select.appendChild(o);
         });
@@ -234,8 +246,34 @@ async function renderFilterPanel(columns, parent) {
           select.value = prefill.value;
         }
 
-        select.addEventListener("change", applyFilters);
         valueTd.appendChild(select);
+
+      } else if (field && field.fieldType === "Checkbox") {
+        const select = document.createElement("select");
+        select.classList.add("theme-select", "filter-value-select");
+        select.dataset.field = selectedFieldName;
+
+        const all = document.createElement("option");
+        all.value = "";
+        all.textContent = "All";
+        select.appendChild(all);
+
+        const trueOpt = document.createElement("option");
+        trueOpt.value = "true";
+        trueOpt.textContent = "True";
+        select.appendChild(trueOpt);
+
+        const falseOpt = document.createElement("option");
+        falseOpt.value = "false";
+        falseOpt.textContent = "False";
+        select.appendChild(falseOpt);
+
+        if (prefill.value && prefill.field === selectedFieldName) {
+          select.value = prefill.value;
+        }
+
+        valueTd.appendChild(select);
+
       } else {
         const input = document.createElement("input");
         input.type = "text";
@@ -247,20 +285,14 @@ async function renderFilterPanel(columns, parent) {
           input.value = prefill.value;
         }
 
-        input.addEventListener("input", () => {
-          applyFilters();
-        });
         valueTd.appendChild(input);
       }
     };
 
-    // initialize value control for the initial field (if any)
     await renderValueControl();
 
-    // when the field changes, re-render the value control
     fieldSelect.addEventListener("change", async () => {
       await renderValueControl();
-      applyFilters();
     });
 
     // --- Column 3: Remove button ---
@@ -276,11 +308,9 @@ async function renderFilterPanel(columns, parent) {
 
     removeBtn.addEventListener("click", async () => {
       row.remove();
-      // If all rows are gone, add a fresh blank row so the panel isn't empty
       if (!tbody.querySelector("tr")) {
         await addFilterRow();
       }
-      applyFilters();
     });
 
     removeTd.appendChild(removeBtn);
@@ -289,24 +319,42 @@ async function renderFilterPanel(columns, parent) {
     tbody.appendChild(row);
   };
 
-  // Start with one blank filter row
   await addFilterRow();
-
-  // Wire the "Add Filter" button
   addBtn.addEventListener("click", () => addFilterRow());
 
-  // assemble the panel
+  // --- Apply button ---
+  const applyBtn = document.createElement("button");
+  applyBtn.textContent = "Apply";
+  applyBtn.type = "button";
+  applyBtn.style.marginTop = "0.5rem";
+  applyBtn.style.float = "right";
+  applyBtn.addEventListener("click", () => {
+    applyFilters();
+  });
+
   filterPanel.appendChild(table);
   filterPanel.appendChild(addBtn);
+  filterPanel.appendChild(applyBtn);
   panelContainer.appendChild(filterPanel);
   parent.appendChild(panelContainer);
 
-  // collapse/expand
+  // collapse/expand (sync with Fields)
   panelHeader.addEventListener("click", () => {
-    filterPanel.classList.toggle("collapsed");
-    panelHeader.classList.toggle("collapsed");
+    const isCollapsed = filterPanel.classList.contains("collapsed");
+
+    filterPanel.classList.toggle("collapsed", !isCollapsed);
+    panelHeader.classList.toggle("collapsed", !isCollapsed);
+
+    const fieldsPanel = document.getElementById("fields-panel");
+    const fieldsHeader = fieldsPanel?.previousElementSibling;
+    if (fieldsPanel && fieldsHeader) {
+      fieldsPanel.classList.toggle("collapsed", !isCollapsed);
+      fieldsHeader.classList.toggle("collapsed", !isCollapsed);
+    }
   });
 }
+
+
 
 
 
@@ -363,13 +411,24 @@ function renderFieldsPanel(columns, parent) {
   panelContainer.appendChild(fieldsPanel);
   parent.appendChild(panelContainer);
 
+  // collapse/expand (sync with Filters)
   panelHeader.addEventListener("click", () => {
-    fieldsPanel.classList.toggle("collapsed");
-    panelHeader.classList.toggle("collapsed");
+    const isCollapsed = fieldsPanel.classList.contains("collapsed");
+
+    fieldsPanel.classList.toggle("collapsed", !isCollapsed);
+    panelHeader.classList.toggle("collapsed", !isCollapsed);
+
+    const filterPanel = document.getElementById("filter-panel");
+    const filterHeader = filterPanel?.previousElementSibling;
+    if (filterPanel && filterHeader) {
+      filterPanel.classList.toggle("collapsed", !isCollapsed);
+      filterHeader.classList.toggle("collapsed", !isCollapsed);
+    }
   });
 
   updateDisplayedColumns();
 }
+
 
 // --- BULK ACTION PANEL ---
 function renderBulkActionPanel(columns, parent) {
@@ -394,7 +453,7 @@ function renderBulkActionPanel(columns, parent) {
     columnSelect.appendChild(option);
   });
 
-  // Input (for normal numeric fields)
+  // Input (for numeric fields)
   const valueInput = document.createElement("input");
   valueInput.type = "number";
   valueInput.id = "bulk-value-input";
@@ -409,7 +468,7 @@ function renderBulkActionPanel(columns, parent) {
   // Action dropdown
   const actionSelect = document.createElement("select");
   actionSelect.id = "bulk-action-select";
-  ["Add By Value", "Add By Percent"].forEach((action) => {
+  ["Set To", "Add By Value", "Add By Percent"].forEach((action) => {
     const option = document.createElement("option");
     option.value = action;
     option.textContent = action;
@@ -473,6 +532,7 @@ function renderBulkActionPanel(columns, parent) {
 }
 
 
+
 // --- UPDATE BUTTON ---
 function renderUpdateButton(parent) {
   const updateBtn = document.createElement("button");
@@ -504,43 +564,90 @@ function renderPushButton(parent) {
   parent.appendChild(progressContainer);
 }
 
-// --- BULK ACTION LOGIC ---
 function applyBulkAction(column, value, action) {
   if (!column || value === "") return;
 
   const table = document.querySelector("table.csv-table");
   if (!table) return;
 
-  const rows = table.querySelectorAll("tr");
-  rows.forEach((row, index) => {
-    if (index === 0) return;
-    const checkbox = row.querySelector("td input[type='checkbox']");
-    if (!checkbox || !checkbox.checked) return;
+  // Which rows are checked (no <tbody> dependency)
+  const checkedRowIndices = new Set();
+  const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+  const allChecked = [...allRowCbs].every(cb => cb.checked);
 
-    const rowIndex = index - 1;
-    const rowData = filteredData[rowIndex];
+  table.querySelectorAll("tr").forEach((row, index) => {
+    if (index === 0) return; // skip header
+    const checkbox = row.querySelector('td input[type="checkbox"].row-selector');
+    if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1); // data index
+  });
+
+  const KEY_FIELDS = ["Purchase Price", "Base Price", "Retail Price", "Margin"];
+  const isKeyField = KEY_FIELDS.includes(column);
+
+  // Normalize action labels we’ll accept for “set”
+  const isSetTo =
+    action === "Set To" ||
+    action === "Set" ||
+    action === "Set Value" ||
+    action === "Overwrite";
+
+  checkedRowIndices.forEach((rowIndex) => {
+    let rowData = { ...filteredData[rowIndex] };
 
     if (action === "Set List Value") {
-      // for List/Record fields
+      // list field handling unchanged
       const field = fieldMap.find((f) => f.name === column);
-      const options = listCache[field.name] || [];
+      const options = (listCache[field?.name] || []);
       const selected = options.find((o) => o["Internal ID"] === value);
       rowData[column] = selected ? selected["Name"] : "";
       rowData[`${column}_InternalId`] = value;
     } else {
-      // numeric logic
+      // numeric bulk actions
       const numValue = parseFloat(value);
-      if (isNaN(numValue)) return;
+      if (Number.isNaN(numValue)) return;
 
       const oldVal = parseFloat(rowData[column]) || 0;
-      if (action === "Add By Value") rowData[column] = oldVal + numValue;
-      else if (action === "Add By Percent")
+
+      if (isSetTo) {
+        rowData[column] = numValue;
+      } else if (action === "Add By Value") {
+        rowData[column] = oldVal + numValue;
+      } else if (action === "Add By Percent") {
         rowData[column] = oldVal * (1 + numValue / 100);
+      } else {
+        // unknown action -> do nothing
+        return;
+      }
     }
+
+    // Recalculate if we touched a pricing driver
+    if (isKeyField && typeof window.recalcRow === "function") {
+      rowData = window.recalcRow(rowData, column);
+    }
+
+    // Save & sync baseline for reliable future detection
+    filteredData[rowIndex] = rowData;
+    if (Array.isArray(baselineData)) baselineData[rowIndex] = { ...rowData };
   });
 
-  displayJSONTable(filteredData);
+  // Re-render and restore checks/highlights
+  displayJSONTable(filteredData).then(() => {
+    const newRows = document.querySelectorAll("table.csv-table tr");
+    newRows.forEach((row, index) => {
+      if (index === 0) return;
+      const cb = row.querySelector('td input[type="checkbox"].row-selector');
+      if (cb && checkedRowIndices.has(index - 1)) {
+        cb.checked = true;
+        row.classList.add("selected");
+      }
+    });
+
+    // Restore "select all" if present and previously all were checked
+    const selectAll = document.querySelector('input[type="checkbox"].select-all');
+    if (selectAll && allChecked) selectAll.checked = true;
+  });
 }
+
 
 
 // --- HELPER FUNCTIONS ---
@@ -612,15 +719,13 @@ function applyFilters() {
 
 
 
-// --- TABLE RENDER ---
-// --- TABLE RENDER (with fade-in) ---
 async function displayJSONTable(data, opts = { showBusy: false }) {
   const container = document.getElementById("table-data");
 
   // Remove any existing table or "no data" message
   container.querySelectorAll("table.csv-table, p.no-data").forEach((el) => el.remove());
 
-  // Optional local overlay spinner that belongs to THIS render call
+  // Optional local overlay spinner
   let localOverlay;
   if (opts.showBusy) {
     container.style.position = container.style.position || "relative";
@@ -641,12 +746,11 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       msg.textContent = "No data available.";
       msg.className = "no-data fade-in";
       container.appendChild(msg);
-      // trigger fade-in
       requestAnimationFrame(() => msg.classList.add("show"));
       return;
     }
 
-    // Preload list options for all List/Record columns that will be displayed (once).
+    // Preload list options for List/Record fields
     const listRecordCols = displayedColumns
       .map((name) => fieldMap.find((f) => f.name === name))
       .filter((f) => f && f.fieldType === "List/Record");
@@ -659,7 +763,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
     );
 
     const table = document.createElement("table");
-    table.classList.add("csv-table", "fade-in"); // start transparent
+    table.classList.add("csv-table", "fade-in");
 
     // Header
     const headerRow = document.createElement("tr");
@@ -674,20 +778,48 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       const th = document.createElement("th");
       th.textContent = col;
       if (toolColumns.includes(col)) th.classList.add("tool-column-header");
+
+      // --- Add resize handle ---
+      const resizer = document.createElement("div");
+      resizer.className = "resize-handle";
+      th.appendChild(resizer);
+
+      let startX, startWidth;
+
+      resizer.addEventListener("mousedown", (e) => {
+        startX = e.pageX;
+        startWidth = th.offsetWidth;
+
+        const onMouseMove = (e) => {
+          const newWidth = startWidth + (e.pageX - startX);
+          th.style.width = newWidth + "px";
+        };
+
+        const onMouseUp = () => {
+          document.removeEventListener("mousemove", onMouseMove);
+          document.removeEventListener("mouseup", onMouseUp);
+        };
+
+        document.addEventListener("mousemove", onMouseMove);
+        document.addEventListener("mouseup", onMouseUp);
+      });
+
       headerRow.appendChild(th);
     });
+
     table.appendChild(headerRow);
+
 
     // “Select all” wiring
     selectAllCheckbox.addEventListener("change", () => {
-      const rowCheckboxes = table.querySelectorAll("td input[type='checkbox']");
+      const rowCheckboxes = table.querySelectorAll("td input[type='checkbox'].row-selector");
       rowCheckboxes.forEach((cb) => {
         cb.checked = selectAllCheckbox.checked;
         highlightRow(cb);
       });
     });
 
-    // Build rows efficiently
+    // Build rows
     const frag = document.createDocumentFragment();
     const rows = data.slice(0, MAX_ROWS);
 
@@ -695,20 +827,25 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       const rowData = rows[r];
       const row = document.createElement("tr");
 
-      // Select cell
+      // 🔹 tag row with its index so highlightRow can map back to data
+      row.dataset.index = String(r);
+
+      // --- Column 0: Row selector ---
       const checkboxTd = document.createElement("td");
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.addEventListener("change", () => highlightRow(checkbox));
-      checkboxTd.appendChild(checkbox);
+      const rowCheckbox = document.createElement("input");
+      rowCheckbox.type = "checkbox";
+      rowCheckbox.classList.add("row-selector");
+      rowCheckbox.addEventListener("change", () => highlightRow(rowCheckbox));
+      checkboxTd.appendChild(rowCheckbox);
       row.appendChild(checkboxTd);
 
-      // Data cells
+      // --- Data cells ---
       for (const col of displayedColumns) {
         const td = document.createElement("td");
         const field = fieldMap.find((f) => f.name === col);
 
         if (field && field.fieldType === "List/Record") {
+          // 🔹 Dropdown
           const select = document.createElement("select");
           select.classList.add("theme-select");
           if (field.name === "Class") select.style.maxWidth = "180px";
@@ -728,35 +865,101 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
             );
             rowData[col] = selected ? selected["Name"] : "";
             rowData[`${col}_InternalId`] = select.value;
+
+            rowCheckbox.checked = true;
+            highlightRow(rowCheckbox);
           });
 
           td.appendChild(select);
-        } else {
+
+        } else if (field && field.fieldType === "Checkbox") {
+          // 🔹 Checkbox
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.checked =
+            String(rowData[col]).toLowerCase() === "true" ||
+            rowData[col] === "1" ||
+            rowData[col] === true;
+
+          cb.addEventListener("change", () => {
+            rowData[col] = cb.checked;
+            rowCheckbox.checked = true;
+            highlightRow(rowCheckbox);
+          });
+
+          td.style.textAlign = "center";
+          td.appendChild(cb);
+
+        } else if (["Purchase Price", "Base Price", "Retail Price", "Margin"].includes(col)) {
+          // 🔹 Numeric input
+          const input = document.createElement("input");
+          input.type = "number";
+
+          if (col === "Margin") {
+            input.step = "0.1"; // 1dp
+          } else if (col === "Retail Price") {
+            input.step = "1";   // whole numbers
+          } else {
+            input.step = "0.01"; // 2dp
+          }
+
+          input.value = rowData[col] || "";
+
+          input.addEventListener("input", () => {
+            rowData[col] = input.value;
+            rowCheckbox.checked = true;
+            highlightRow(rowCheckbox);
+          });
+
+          td.appendChild(input);
+
+        } else if (col === "Internal ID") {
+          // 🔹 Read-only Internal ID
           td.textContent = rowData[col] || "";
-          td.contentEditable = true;
+          td.style.color = "#666";
+          td.style.backgroundColor = "#f5f5f5";
+          td.style.cursor = "not-allowed";
+
+        } else {
+          // 🔹 Default text input
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = rowData[col] || "";
+
+          input.addEventListener("input", () => {
+            rowData[col] = input.value;
+            rowCheckbox.checked = true;
+            highlightRow(rowCheckbox);
+          });
+
+          td.appendChild(input);
         }
 
         row.appendChild(td);
       }
 
-      // Parent highlight
-      if (String(rowData["Is Parent"]).toLowerCase() === "true") {
-        row.querySelectorAll("td").forEach((td) => (td.style.backgroundColor = "#FFD700"));
-      }
-
       frag.appendChild(row);
+
+      // ✅ Immediately apply highlight styling based on JSON values
+      highlightRow(row);
     }
 
     table.appendChild(frag);
     container.appendChild(table);
 
-    // Trigger the fade-in after the table is in the DOM
+
+
+    // 🔹 Initial highlight pass for all rows
+    table.querySelectorAll("tbody tr").forEach((tr) => {
+      const cb = tr.querySelector("input.row-selector");
+      highlightRow(cb ?? tr);
+    });
+
     requestAnimationFrame(() => {
       table.classList.add("show");
     });
 
   } finally {
-    // Ensure the local overlay is removed after this render finishes
     if (localOverlay) {
       localOverlay.style.transition = "opacity 200ms ease";
       localOverlay.style.opacity = "0";
@@ -765,77 +968,162 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
   }
 }
 
+function highlightRow(checkboxOrRow) {
+  const row = checkboxOrRow.closest ? checkboxOrRow.closest("tr") : checkboxOrRow;
 
+  // Use dataset index (set when building rows) to map back to data
+  const dataIndex = Number(row.dataset.index);
+  const rowData = filteredData[dataIndex] || {};
 
-// --- ROW HIGHLIGHT ---
-function highlightRow(checkbox) {
-  const row = checkbox.closest("tr");
-  const rowIndex = row.rowIndex - 1;
+  // Normalise checkbox values (booleans, "true"/"false", "T"/"F", "1"/"0", "Y"/"N")
+  const isTrue = (v) => {
+    if (v === true || v === 1) return true;
+    if (typeof v === "string") {
+      const val = v.trim().toLowerCase();
+      return ["true", "t", "1", "y", "yes"].includes(val);
+    }
+    return false;
+  };
 
-  if (
-    filteredData[rowIndex] &&
-    String(filteredData[rowIndex]["Is Parent"]).toLowerCase() === "true"
-  ) {
-    row
-      .querySelectorAll("td")
-      .forEach((td) => (td.style.backgroundColor = "#FFD700"));
-    return;
+  // Reset any old state
+  row.classList.remove("is-parent", "is-inactive");
+
+  // Apply Parent / Inactive classes from raw JSON data
+  if (isTrue(rowData["Is Parent"])) {
+    row.classList.add("is-parent");
+  }
+  if (isTrue(rowData["Inactive"])) {
+    row.classList.add("is-inactive");
   }
 
-  row.querySelectorAll("td").forEach((td, i) => {
-    if (i === 0) return;
-    td.style.backgroundColor = checkbox.checked
-      ? "#e0f7fa"
-      : row.rowIndex % 2 === 0
-      ? ""
-      : "#f9f9f9";
-  });
+  // Normal styling if not parent/inactive
+  if (!row.classList.contains("is-parent") && !row.classList.contains("is-inactive")) {
+    const selected = row.querySelector("input.row-selector")?.checked;
+    row.querySelectorAll("td").forEach((td, i) => {
+      if (i === 0) return; // skip selector col
+      td.style.backgroundColor = selected
+        ? "var(--row-select)"
+        : (row.sectionRowIndex % 2 ? "#f9f9f9" : "");
+      td.style.color = "";
+    });
+  } else {
+    // Clear inline styles when class-based styling is applied
+    row.querySelectorAll("td").forEach((td) => {
+      td.style.backgroundColor = "";
+      td.style.color = "";
+    });
+  }
 }
 
-// --- APPLY UPDATES ---
 function applyUpdates() {
   const table = document.querySelector("table.csv-table");
   if (!table) return;
 
-  const rows = table.querySelectorAll("tr");
-  rows.forEach((row, index) => {
-    if (index === 0) return;
+  // Grab all rows, skip header
+  const allRows = Array.from(table.querySelectorAll("tr"));
+  const rows = allRows.slice(1);
 
-    const checkbox = row.querySelector("td input[type='checkbox']");
+  // Headers for column lookup
+  const headers = Array.from(allRows[0].querySelectorAll("td, th")).map(h =>
+    h.textContent.trim()
+  );
+
+  const normalize = (col, val) => {
+    if (val == null) return null;
+    const n = parseFloat(val) || 0;
+    switch (col) {
+      case "Purchase Price":
+      case "Base Price":
+        return parseFloat(n.toFixed(2));
+      case "Retail Price":
+        return Math.round(n);
+      case "Margin":
+        return parseFloat(n.toFixed(1));
+      default:
+        return n;
+    }
+  };
+
+  rows.forEach((rowEl, idx) => {
+    const checkbox = rowEl.querySelector('td input[type="checkbox"]');
     if (!checkbox || !checkbox.checked) return;
 
-    const rowIndex = index - 1;
-    const rowData = filteredData[rowIndex];
+    let rowData = { ...filteredData[idx] };
 
-    const retailIdx = displayedColumns.indexOf("Retail Price") + 1;
-    const baseIdx = displayedColumns.indexOf("Base Price") + 1;
-    const marginIdx = displayedColumns.indexOf("Margin") + 1;
+    const readNum = (col) => {
+      const colIndex = headers.findIndex(h => h.toLowerCase() === col.toLowerCase());
+      if (colIndex === -1) return null;
+      const td = rowEl.children[colIndex];
+      if (!td) return null;
+      const el = td.querySelector("input, select, textarea");
+      let raw = el ? el.value : td.textContent;
+      if (!raw) return null;
+      const n = parseFloat(raw.replace(/[^\d.\-]/g, ""));
+      return Number.isFinite(n) ? n : null;
+    };
 
-    const retailTd = row.children[retailIdx];
-    const baseTd = row.children[baseIdx];
-    const marginTd = row.children[marginIdx];
+    // DOM values
+    const domP = readNum("Purchase Price");
+    const domB = readNum("Base Price");
+    const domR = readNum("Retail Price");
+    const domM = readNum("Margin");
 
-    const oldRetail = parseFloat(rowData["Retail Price"]) || 0;
-    const oldBase = parseFloat(rowData["Base Price"]) || oldRetail;
+    // Original values from baselineData (snapshot before edits)
+    const orig = baselineData[idx];
+    const oP = normalize("Purchase Price", orig["Purchase Price"]);
+    const oB = normalize("Base Price", orig["Base Price"]);
+    const oR = normalize("Retail Price", orig["Retail Price"]);
+    const oM = normalize("Margin", orig["Margin"]);
 
-    const newRetail = parseFloat(retailTd?.textContent) || oldRetail;
+    // Normalized DOM values
+    const nP = domP != null ? normalize("Purchase Price", domP) : null;
+    const nB = domB != null ? normalize("Base Price", domB) : null;
+    const nR = domR != null ? normalize("Retail Price", domR) : null;
+    const nM = domM != null ? normalize("Margin", domM) : null;
 
-    const changePct = newRetail / oldRetail;
+    // Detect which field changed (priority: Margin > Retail > Base > Purchase)
+    let changedField = null;
+    if (nM !== null && nM !== oM) changedField = "Margin";
+    else if (nR !== null && nR !== oR) changedField = "Retail Price";
+    else if (nB !== null && nB !== oB) changedField = "Base Price";
+    else if (nP !== null && nP !== oP) changedField = "Purchase Price";
 
-    rowData["Retail Price"] = newRetail;
-    rowData["Base Price"] = (oldBase * changePct).toFixed(2);
-    rowData["Margin"] = (
-      (rowData["Retail Price"] / rowData["Base Price"] - 1) *
-      100
-    ).toFixed(2);
+    if (!changedField) {
+      console.log(`⏭️ Row ${idx}: no detected changes`);
+      return;
+    }
 
-    if (retailTd) retailTd.textContent = rowData["Retail Price"];
-    if (baseTd) baseTd.textContent = rowData["Base Price"];
-    if (marginTd) marginTd.textContent = rowData["Margin"];
+    // Apply DOM values into rowData
+    if (domP !== null) rowData["Purchase Price"] = domP;
+    if (domB !== null) rowData["Base Price"] = domB;
+    if (domR !== null) rowData["Retail Price"] = domR;
+    if (domM !== null) rowData["Margin"] = domM;
+
+    console.log("⚡ calling recalcRow with", { idx, changedField, rowData });
+    const updated = window.recalcRow(rowData, changedField);
+    console.log("✅ after recalcRow", updated);
+
+    filteredData[idx] = updated;
+    baselineData[idx] = { ...updated }; // update baseline for future comparisons
   });
 
-  displayJSONTable(filteredData);
+  // Re-render and restore selections
+  displayJSONTable(filteredData).then(() => {
+    rows.forEach((rowEl, idx) => {
+      const checkbox = rowEl.querySelector('td input[type="checkbox"]');
+      if (checkbox && checkbox.checked) {
+        const newRow = document.querySelectorAll("table.csv-table tr")[idx + 1];
+        if (newRow) {
+          const cb = newRow.querySelector('td input[type="checkbox"]');
+          if (cb) cb.checked = true;
+          newRow.classList.add("selected");
+        }
+      }
+    });
+  });
 }
+
+
 
 const API_BASE = "http://localhost:3000"; // ✅ backend server
 
@@ -847,20 +1135,40 @@ async function pushUpdates() {
   const rowsToPush = [];
 
   rows.forEach((row, idx) => {
-    const checkbox = row.querySelector("td input[type='checkbox']");
+    const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
     if (!checkbox || !checkbox.checked) return;
 
     const rowData = {};
     displayedColumns.forEach((col, colIdx) => {
+      const td = row.children[colIdx + 1];
+      if (!td) return;
+
       const field = fieldMap.find((f) => f.name === col);
+
       if (field && field.fieldType === "List/Record") {
-        const select = row.children[colIdx + 1].querySelector("select");
-        rowData[col] = select.value;
-        rowData[`${col}_InternalId`] = select.value;
+        // --- List/Record select ---
+        const select = td.querySelector("select");
+        if (select) {
+          const selectedId = select.value;
+          const selectedText = select.options[select.selectedIndex]?.text || "";
+          rowData[col] = selectedText;
+          rowData[`${col}_InternalId`] = selectedId;
+        }
+      } else if (field && field.fieldType === "Checkbox") {
+        // --- Boolean checkbox ---
+        const cb = td.querySelector("input[type='checkbox']");
+        rowData[col] = cb ? cb.checked : false;
       } else {
-        rowData[col] = row.children[colIdx + 1].textContent;
+        // --- Inputs (text or number) or fallback to td text ---
+        const input = td.querySelector("input");
+        if (input) {
+          rowData[col] = input.value;
+        } else {
+          rowData[col] = td.textContent.trim();
+        }
       }
     });
+
     rowsToPush.push(rowData);
   });
 
@@ -872,7 +1180,6 @@ async function pushUpdates() {
   }
 
   try {
-    // Step 1: enqueue job
     const response = await fetch(`${API_BASE}/push-updates`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -896,7 +1203,7 @@ async function pushUpdates() {
     }
     window.updateFooterProgress(0, rowsToPush.length, "pending", queuePos, queueTotal);
 
-    // Step 2: poll job status
+    // --- Poll job status ---
     const interval = setInterval(async () => {
       try {
         const statusRes = await fetch(`${API_BASE}/push-status/${jobId}`);
@@ -921,10 +1228,14 @@ async function pushUpdates() {
         if (status === "completed" || status === "error") {
           clearInterval(interval);
 
-          // Count successes (200 or 204 are good)
+          // ✅ Updated success/fail detection
           const successCount = results.filter(
-            (r) => r.status === 200 || r.status === 204
+            (r) =>
+              r.status === "Success" ||
+              r.status === 200 ||
+              r.status === 204
           ).length;
+
           const failCount = total - successCount;
 
           if (progressContainer) {
@@ -935,7 +1246,6 @@ async function pushUpdates() {
           }
 
           window.updateFooterProgress(processed, total, status, queuePos, queueTotal);
-
           localStorage.removeItem("lastJobId");
         }
       } catch (err) {
@@ -946,7 +1256,7 @@ async function pushUpdates() {
         window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
         clearInterval(interval);
       }
-    }, 3000); // poll every 3s
+    }, 3000);
   } catch (err) {
     console.error("Error starting push:", err);
     if (progressContainer) {
@@ -955,6 +1265,7 @@ async function pushUpdates() {
     window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
   }
 }
+
 
 
 // --- STYLING ---

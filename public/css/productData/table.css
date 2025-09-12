@@ -161,7 +161,7 @@ button:disabled {
   overflow: hidden;
 }
 
-/* Column filter bits (kept for any legacy UI that still uses them) */
+/* Column filter bits */
 .column-filter {
   display: flex;
   flex-direction: column;
@@ -207,6 +207,7 @@ select.theme-select {
   background-color: #fff;
   font-size: 0.9rem;
   font-family: inherit;
+  max-width: 10rem;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
@@ -218,6 +219,50 @@ select.theme-select:focus,
   box-shadow: var(--focus);
 }
 
+/* =========================
+   Table Inputs (numeric + text)
+========================= */
+.csv-table input[type="number"],
+.csv-table input[type="text"] {
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  color: var(--ink);
+  background-color: #fff;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Focus state */
+.csv-table input[type="number"]:focus,
+.csv-table input[type="text"]:focus {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: var(--focus);
+  background-color: #f0fbff;
+}
+
+/* Remove browser spinners on numeric inputs */
+.csv-table input[type="number"]::-webkit-inner-spin-button,
+.csv-table input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.csv-table input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+/* Alignment */
+.csv-table input[type="number"] {
+  text-align: right;
+}
+.csv-table input[type="text"] {
+  text-align: left;
+}
+
 /* Filter table cells align nicely */
 #filter-table th, #filter-table td {
   vertical-align: middle;
@@ -227,8 +272,8 @@ select.theme-select:focus,
    Table (CSV)
 ========================= */
 #table-data {
-  /* helps horizontal scroll on narrow screens */
   overflow-x: auto;
+  margin-bottom: 3rem;
 }
 
 .csv-table {
@@ -241,7 +286,6 @@ select.theme-select:focus,
   border-radius: var(--radius);
   overflow: hidden;
   background: #fff;
-  /* allow sticky header to work when container scrolls */
   position: relative;
 }
 
@@ -258,7 +302,31 @@ select.theme-select:focus,
   text-align: left;
   padding: 0.75rem 1rem;
   border-bottom: 0.125rem solid var(--table-head-border);
+  position: relative;
+  white-space: nowrap;
+  min-width: 80px; /* optional */
 }
+
+.csv-table th .resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 6px;              /* draggable zone */
+  height: 100%;
+  cursor: col-resize;
+  user-select: none;
+
+  /* 👇 make the divider line visible */
+  border-right: 2px solid #fff; /* white line, matches header text */
+  opacity: 0.6;
+}
+
+.csv-table th .resize-handle:hover {
+  opacity: 1; /* highlight on hover */
+  border-right-color: yellow; /* optional: accent when hovering */
+}
+
+
 
 .csv-table td {
   padding: 0.75rem 1rem;
@@ -285,7 +353,7 @@ select.theme-select:focus,
   font-weight: bold;
 }
 
-/* Editable cells: clearer focus */
+/* Editable cells: clearer focus (legacy contenteditable support) */
 .csv-table td[contenteditable="true"] {
   outline: none;
   cursor: text;
@@ -296,19 +364,18 @@ select.theme-select:focus,
   background: #f0fbff;
 }
 
-/* Optional class if you ever toggle row-selected via CSS (JS already colors) */
+/* Row selected */
 .csv-table tr.row-selected td {
   background: var(--row-select);
 }
 
-/* Parent rows (JS also sets this inline; class gives CSS fallback) */
+/* Parent rows */
 .csv-table tr.is-parent td {
   background-color: var(--parent);
 }
 
 /* =========================
    Local "Building table…" overlay
-   (used by displayJSONTable(..., { showBusy: true }))
 ========================= */
 .table-build-overlay {
   position: absolute;
@@ -333,7 +400,6 @@ select.theme-select:focus,
   color: var(--ink);
 }
 
-/* Reuse the same spinner style inside overlay */
 .table-build-overlay .spinner {
   margin: 0;
   width: 1.75rem;
@@ -351,7 +417,6 @@ select.theme-select:focus,
 .fade-in.show {
   opacity: 1;
 }
-
 
 /* =========================
    Responsive
@@ -405,4 +470,14 @@ select.theme-select:focus,
   .csv-table th, .csv-table td {
     padding: 0.4rem 0.4rem;
   }
+}
+/* Inactive rows */
+.csv-table tr.is-inactive td {
+  background-color: #E63946 !important; /* red */
+  color: #F8F9FA !important;           /* light text */
+}
+/* Parent rows */
+.csv-table tr.is-parent td {
+  background-color: #FFD700 !important; /* gold */
+  color: black;
 }
