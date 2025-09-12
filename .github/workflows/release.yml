@@ -3,11 +3,11 @@ name: Build & Release (Mac Universal)
 on:
   push:
     tags:
-      - "v*.*.*"    # runs automatically on version tags e.g. v1.0.8
-  workflow_dispatch:   # allows manual trigger from the Actions tab
+      - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
-  contents: write   # required to upload release assets
+  contents: write
 
 jobs:
   release-mac:
@@ -28,8 +28,8 @@ jobs:
 
       - name: Build & Publish Mac Universal DMG
         run: |
-          echo "🍏 Building Mac universal dmg"
+          echo "🍏 Building and uploading Mac universal dmg"
           npx electron-builder --mac dmg --universal -p always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false   # disable Mac signing in CI
+          CSC_IDENTITY_AUTO_DISCOVERY: false
