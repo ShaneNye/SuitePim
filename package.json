@@ -79,9 +79,9 @@
 "mac": {
   "category": "public.app-category.productivity",
   "target": ["dmg"],
-  "icon": "public/assets/moon-man-logo.icns",
-  "arch": ["x64", "arm64"]
-},
+  "icon": "public/assets/moon-man-logo.icns"
+}
+,
     "linux": {
       "target": ["AppImage"],
       "icon": "public/assets/moon-man-logo.png"
