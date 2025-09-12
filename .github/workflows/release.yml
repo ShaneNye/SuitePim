@@ -1,17 +1,21 @@
-name: Build & Release (Mac Only)
+name: Build & Release (Windows + Mac)
 
 on:
   push:
     tags:
       - "v*.*.*"
-  workflow_dispatch:   # 👈 allows manual trigger from the Actions tab
+  workflow_dispatch:
 
 permissions:
-  contents: write   # required to upload release assets
+  contents: write
 
 jobs:
-  release:
-    runs-on: macos-latest
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
@@ -26,15 +30,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build & Publish Mac Universal DMG
+      - name: Build & Publish
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "🔨 Manual run → build Mac universal dmg as draft release"
-            npx electron-builder --mac dmg --universal --publish onTagOrDraft
-          else
-            echo "🏷 Tag push → build Mac universal dmg and publish"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            echo "🍏 Building Mac universal dmg"
             npx electron-builder --mac dmg --universal -p always
+          else
+            echo "🪟 Building Windows exe"
+            npx electron-builder --win nsis -p always
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: false   # disables Mac code signing in CI
+          CSC_IDENTITY_AUTO_DISCOVERY: false
