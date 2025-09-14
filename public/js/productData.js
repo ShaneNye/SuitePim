@@ -1196,8 +1196,12 @@ async function pushUpdates() {
         // --- Boolean checkbox ---
         const cb = td.querySelector("input[type='checkbox']");
         rowData[col] = cb ? cb.checked : false;
+      } else if (field && field.fieldType === "Free-Form Text") {
+        // --- Textarea for free-form text ---
+        const textarea = td.querySelector("textarea");
+        rowData[col] = textarea ? textarea.value : td.textContent.trim();
       } else {
-        // --- Inputs (text or number) or fallback to td text ---
+        // --- Inputs (text/number) or fallback to td text ---
         const input = td.querySelector("input");
         if (input) {
           rowData[col] = input.value;
@@ -1303,6 +1307,7 @@ async function pushUpdates() {
     window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
   }
 }
+
 
 
 
