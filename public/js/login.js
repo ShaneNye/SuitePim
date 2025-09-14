@@ -1,26 +1,77 @@
 // public/js/login.js
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
-  const environment = document.getElementById("enviroment")?.value || "Sandbox";
+const loginBtn = document.getElementById("loginBtn");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
+const environmentInput = document.getElementById("enviroment");
+
+async function handleLogin() {
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
+  const environment = environmentInput?.value || "Sandbox";
+
+  if (!username || !password) {
+    alert("Please enter both username and password.");
+    return;
+  }
+
+  // disable while request runs
+  loginBtn.disabled = true;
+  usernameInput.disabled = true;
+  passwordInput.disabled = true;
 
   try {
     const res = await fetch("/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password, environment }), // <-- add environment
+      body: JSON.stringify({ username, password, environment }),
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      console.error("⚠️ Could not parse server response as JSON:", parseErr);
+      data = { success: false, message: "Login failed. Invalid server response." };
+    }
+
     if (data.success) {
+      console.log("✅ Login successful");
       localStorage.setItem("username", username);
       localStorage.setItem("environment", environment);
       window.location.href = "/home.html";
     } else {
-      alert(data.message || "Login failed");
+      console.warn("❌ Login failed:", data.message);
+      alert(data.message || "Login failed. Please check your credentials.");
     }
   } catch (err) {
-    console.error("Error logging in:", err);
-    alert("An error occurred. Please try again.");
+    console.error("💥 Error logging in:", err);
+    alert("An error occurred while logging in. Please try again.");
+  } finally {
+  console.log("🔄 Resetting inputs so user can retry");
+  loginBtn.disabled = false;
+  usernameInput.disabled = false;
+  passwordInput.disabled = false;
+
+  // ✅ force repaint/reflow
+  usernameInput.style.display = "none";
+  usernameInput.offsetHeight; // trigger reflow
+  usernameInput.style.display = "";
+
+  usernameInput.focus();
+}
+
+}
+
+// --- Button click handler (prevents accidental form submit) ---
+loginBtn.addEventListener("click", (e) => {
+  e.preventDefault();
+  handleLogin();
+});
+
+// --- Enter key handler (prevents accidental form submit) ---
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handleLogin();
   }
 });

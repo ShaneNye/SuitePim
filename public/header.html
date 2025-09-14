@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="./css/header/header.css">
     <link rel="stylesheet" href="./css/header/main-nav.css">
-        <script src="./js/home.js"></script>
+    <script src="./js/home.js"></script>
 
 
 </head>
@@ -20,25 +20,20 @@
         </div>
         <div class="main-nav">
             <ul>
-                <a href="./home.html">
-                    <li>Home</li>
-                </a>
-                <a href="./ProductData.html">
-                    <li>Product Data</li>
-                </a>
-                <a href="/PromotionOffers.html">
-                    <li>Promotion & Offers</li>
-                </a>
-                <a href="/webManagement.html">
-                    <li>Web Management</li>
-                </a>
-                <a href="/Analytics.html">
-                    <li>Analytics</li>
-                </a>
-                <a href="/Support.html">
-                    <li>Request Support</li>
-                </a>
+                <li class="dropdown"><a href="./home.html">Home</a></li>
+                <li class="dropdown">
+                    <a href="#">Product Development</a>
+                    <ul class="dropdown-menu">
+                        <li><a href="./ProductData.html">Product Data</a></li>
+                        <li><a href="./validation.html">Product Validation</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown"><a href="/PromotionOffers.html">Promotion & Offers</a></li>
+                <li class="dropdown"><a href="/webManagement.html">Web Management</a></li>
+                <li class="dropdown"><a href="/Analytics.html">Analytics</a></li>
+                <li class="dropdown"><a href="/Support.html">Request Support</a></li>
             </ul>
+
         </div>
     </div>
 </body>

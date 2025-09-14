@@ -68,4 +68,6 @@ export const fieldMap = [
 
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
+  { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
+
 ];

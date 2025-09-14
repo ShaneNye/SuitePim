@@ -13,7 +13,7 @@ const environment = localStorage.getItem("environment") || "Sandbox";
 const jsonUrl =
   environment.toLowerCase() === "production" ? PRODjsonUrl : SANDBOXjsonUrl;
 
-const MAX_ROWS = 500;
+const MAX_ROWS = 100;
 
 
 
@@ -663,7 +663,7 @@ function applyFilters() {
   const tbody = document.querySelector("#filter-tbody");
   if (!tbody) {
     filteredData = [...fullData];
-    displayJSONTable(filteredData);
+    displayJSONTable(filteredData, { showAll: false }); // no filters → cap 500
     return;
   }
 
@@ -695,12 +695,13 @@ function applyFilters() {
   });
 
   if (rules.length === 0) {
+    // --- No filters → reset to 500 row cap
     filteredData = [...fullData];
-    displayJSONTable(filteredData);
+    displayJSONTable(filteredData, { showAll: false });
     return;
   }
 
-  // apply AND logic across rules
+  // --- Apply AND logic across rules
   filteredData = fullData.filter((row) =>
     rules.every((r) => {
       const cell = row[r.field] != null ? String(row[r.field]) : "";
@@ -714,18 +715,19 @@ function applyFilters() {
     })
   );
 
-  displayJSONTable(filteredData);
+  // --- Filters active → show all rows
+  displayJSONTable(filteredData, { showAll: true });
 }
 
 
-
+// --- TABLE RENDER (with fade-in + resizable columns + safe Link rendering) ---
 async function displayJSONTable(data, opts = { showBusy: false }) {
   const container = document.getElementById("table-data");
 
   // Remove any existing table or "no data" message
   container.querySelectorAll("table.csv-table, p.no-data").forEach((el) => el.remove());
 
-  // Optional local overlay spinner
+  // Optional overlay spinner
   let localOverlay;
   if (opts.showBusy) {
     container.style.position = container.style.position || "relative";
@@ -750,7 +752,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       return;
     }
 
-    // Preload list options for List/Record fields
+    // Preload list options for list/record fields
     const listRecordCols = displayedColumns
       .map((name) => fieldMap.find((f) => f.name === name))
       .filter((f) => f && f.fieldType === "List/Record");
@@ -764,35 +766,47 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
 
     const table = document.createElement("table");
     table.classList.add("csv-table", "fade-in");
+    table.style.tableLayout = "fixed"; // enforce colgroup widths
 
-    // Header
+    // --- Colgroup for resizable columns ---
+    const colgroup = document.createElement("colgroup");
+    for (let i = 0; i < displayedColumns.length + 1; i++) {
+      const col = document.createElement("col");
+      col.style.width = i === 0 ? "40px" : "150px"; // default widths (first is selector)
+      colgroup.appendChild(col);
+    }
+    table.appendChild(colgroup);
+
+    // --- Header ---
+    const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
 
+    // Select-all checkbox
     const selectAllTh = document.createElement("th");
     const selectAllCheckbox = document.createElement("input");
     selectAllCheckbox.type = "checkbox";
     selectAllTh.appendChild(selectAllCheckbox);
     headerRow.appendChild(selectAllTh);
 
-    displayedColumns.forEach((col) => {
+    displayedColumns.forEach((col, i) => {
       const th = document.createElement("th");
       th.textContent = col;
       if (toolColumns.includes(col)) th.classList.add("tool-column-header");
 
-      // --- Add resize handle ---
+      // Resizer handle
       const resizer = document.createElement("div");
       resizer.className = "resize-handle";
       th.appendChild(resizer);
 
       let startX, startWidth;
-
       resizer.addEventListener("mousedown", (e) => {
+        e.preventDefault();
         startX = e.pageX;
-        startWidth = th.offsetWidth;
+        startWidth = colgroup.children[i + 1].offsetWidth; // +1 for selector column
 
         const onMouseMove = (e) => {
-          const newWidth = startWidth + (e.pageX - startX);
-          th.style.width = newWidth + "px";
+          const newWidth = Math.max(60, startWidth + (e.pageX - startX));
+          colgroup.children[i + 1].style.width = newWidth + "px";
         };
 
         const onMouseUp = () => {
@@ -807,10 +821,10 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       headerRow.appendChild(th);
     });
 
-    table.appendChild(headerRow);
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
 
-
-    // “Select all” wiring
+    // --- Select all wiring ---
     selectAllCheckbox.addEventListener("change", () => {
       const rowCheckboxes = table.querySelectorAll("td input[type='checkbox'].row-selector");
       rowCheckboxes.forEach((cb) => {
@@ -819,18 +833,37 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       });
     });
 
-    // Build rows
-    const frag = document.createDocumentFragment();
-    const rows = data.slice(0, MAX_ROWS);
+    // --- Body ---
+    const tbody = document.createElement("tbody");
+    const rows = opts.showAll ? data : data.slice(0, MAX_ROWS);
+
+
+    // helper: safely render a value that may contain an <a> tag from JSON
+    const renderLinkValue = (raw) => {
+      if (typeof raw !== "string") return null;
+      // quick check to avoid creating elements unnecessarily
+      if (!/<a\s+[^>]*href=/i.test(raw)) return null;
+
+      // Parse safely & extract just the anchor
+      const tpl = document.createElement("template");
+      tpl.innerHTML = raw.trim();
+      const a = tpl.content.querySelector("a");
+      if (!a) return null;
+
+      const link = document.createElement("a");
+      link.href = a.href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = a.textContent || a.href;
+      return link;
+    };
 
     for (let r = 0; r < rows.length; r++) {
       const rowData = rows[r];
       const row = document.createElement("tr");
-
-      // 🔹 tag row with its index so highlightRow can map back to data
       row.dataset.index = String(r);
 
-      // --- Column 0: Row selector ---
+      // Row selector
       const checkboxTd = document.createElement("td");
       const rowCheckbox = document.createElement("input");
       rowCheckbox.type = "checkbox";
@@ -839,13 +872,14 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
       checkboxTd.appendChild(rowCheckbox);
       row.appendChild(checkboxTd);
 
-      // --- Data cells ---
+      // Data cells
       for (const col of displayedColumns) {
         const td = document.createElement("td");
         const field = fieldMap.find((f) => f.name === col);
+        const rawVal = rowData[col];
 
         if (field && field.fieldType === "List/Record") {
-          // 🔹 Dropdown
+          // Dropdown
           const select = document.createElement("select");
           select.classList.add("theme-select");
           if (field.name === "Class") select.style.maxWidth = "180px";
@@ -865,7 +899,6 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
             );
             rowData[col] = selected ? selected["Name"] : "";
             rowData[`${col}_InternalId`] = select.value;
-
             rowCheckbox.checked = true;
             highlightRow(rowCheckbox);
           });
@@ -873,13 +906,13 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
           td.appendChild(select);
 
         } else if (field && field.fieldType === "Checkbox") {
-          // 🔹 Checkbox
+          // Checkbox
           const cb = document.createElement("input");
           cb.type = "checkbox";
           cb.checked =
-            String(rowData[col]).toLowerCase() === "true" ||
-            rowData[col] === "1" ||
-            rowData[col] === true;
+            String(rawVal).toLowerCase() === "true" ||
+            rawVal === "1" ||
+            rawVal === true;
 
           cb.addEventListener("change", () => {
             rowData[col] = cb.checked;
@@ -891,74 +924,78 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
           td.appendChild(cb);
 
         } else if (["Purchase Price", "Base Price", "Retail Price", "Margin"].includes(col)) {
-          // 🔹 Numeric input
+          // Numeric input
           const input = document.createElement("input");
           input.type = "number";
-
-          if (col === "Margin") {
-            input.step = "0.1"; // 1dp
-          } else if (col === "Retail Price") {
-            input.step = "1";   // whole numbers
-          } else {
-            input.step = "0.01"; // 2dp
-          }
-
-          input.value = rowData[col] || "";
-
+          if (col === "Margin") input.step = "0.1";
+          else if (col === "Retail Price") input.step = "1";
+          else input.step = "0.01";
+          input.value = rawVal || "";
           input.addEventListener("input", () => {
             rowData[col] = input.value;
             rowCheckbox.checked = true;
             highlightRow(rowCheckbox);
           });
-
           td.appendChild(input);
 
         } else if (col === "Internal ID") {
-          // 🔹 Read-only Internal ID
-          td.textContent = rowData[col] || "";
+          // Read-only ID
+          td.textContent = rawVal || "";
           td.style.color = "#666";
           td.style.backgroundColor = "#f5f5f5";
           td.style.cursor = "not-allowed";
 
+        // 🔹 Link FIRST (either explicit field type OR auto-detect raw <a ...>)
+        } else if ((field && field.fieldType === "Link") || (typeof rawVal === "string" && /<a\s+[^>]*href=/i.test(rawVal))) {
+          const linkEl = renderLinkValue(rawVal);
+          if (linkEl) {
+            td.appendChild(linkEl);
+          } else {
+            td.textContent = rawVal || "";
+          }
+          // mark visually read-only (optional styling)
+          td.style.backgroundColor = "#f5f5f5";
+          td.style.cursor = "default";
+
+        } else if (field && field.fieldType === "Free-Form Text") {
+          // Textarea (invisible styling handled by CSS)
+          const textarea = document.createElement("textarea");
+          textarea.value = rawVal || "";
+          textarea.rows = 2;
+          textarea.style.resize = "none";
+          textarea.addEventListener("input", () => {
+            rowData[col] = textarea.value;
+            rowCheckbox.checked = true;
+            highlightRow(rowCheckbox);
+          });
+          td.appendChild(textarea);
+
         } else {
-          // 🔹 Default text input
+          // Default text input
           const input = document.createElement("input");
           input.type = "text";
-          input.value = rowData[col] || "";
-
+          input.value = rawVal || "";
           input.addEventListener("input", () => {
             rowData[col] = input.value;
             rowCheckbox.checked = true;
             highlightRow(rowCheckbox);
           });
-
           td.appendChild(input);
         }
 
         row.appendChild(td);
       }
 
-      frag.appendChild(row);
-
-      // ✅ Immediately apply highlight styling based on JSON values
-      highlightRow(row);
+      tbody.appendChild(row);
+      highlightRow(rowCheckbox);
     }
 
-    table.appendChild(frag);
+    table.appendChild(tbody);
     container.appendChild(table);
-
-
-
-    // 🔹 Initial highlight pass for all rows
-    table.querySelectorAll("tbody tr").forEach((tr) => {
-      const cb = tr.querySelector("input.row-selector");
-      highlightRow(cb ?? tr);
-    });
 
     requestAnimationFrame(() => {
       table.classList.add("show");
     });
-
   } finally {
     if (localOverlay) {
       localOverlay.style.transition = "opacity 200ms ease";
@@ -967,6 +1004,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
     }
   }
 }
+
 
 function highlightRow(checkboxOrRow) {
   const row = checkboxOrRow.closest ? checkboxOrRow.closest("tr") : checkboxOrRow;

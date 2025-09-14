@@ -4,14 +4,82 @@
 <head>
      <title>Request Support</title>
      <script src="/js/header.js"></script>
+     <script src="/js/support.js"></script>
+
      <link rel="stylesheet" href="/css/home/home.css">
+     <link rel="stylesheet" href="/css/support/support.css">
 </head>
 
 <body>
      <div id="header-container"></div>
 
-    <div id="footer-container"></div>
+     <main class="support-container">
+          <h1>Request Support</h1>
+          <p class="support-intro">
+               During Alpha Testing (now) please raise support tickets for existing functionality that does not work as
+               expected. or to request additional functionality that is required before we turn off the 'netsuite live
+               spreadsheet (google sheet)' and exclusivly use this system.
+          </p>
 
+          <form id="support-form" class="support-form">
+               <div class="form-group">
+                    <label for="issue-title">Issue Title <span class="required">*</span></label>
+                    <input type="text" id="issue-title" name="title" placeholder="e.g., calculated field is wrong"
+                         required>
+               </div>
+
+               <div class="form-group">
+                    <label for="issue-description">Description <span class="required">*</span></label>
+                    <textarea id="issue-description" name="description" rows="6"
+                         placeholder="Steps to reproduce, what you expected, and what happened..." required></textarea>
+               </div>
+
+               <div class="form-group">
+                    <label for="environment">Environment</label>
+                    <select id="environment" name="environment">
+                         <option>Sandbox</option>
+                         <option>Production</option>
+                    </select>
+               </div>
+
+               <button type="submit" class="submit-btn">Submit Support Request</button>
+          </form>
+
+          <div id="support-message" class="support-message"></div>
+     </main>
+
+     <div id="footer-container"></div>
+
+     <script>
+          document.getElementById("support-form").addEventListener("submit", async (e) => {
+               e.preventDefault();
+
+               const title = document.getElementById("issue-title").value;
+               const description = document.getElementById("issue-description").value;
+               const environment = document.getElementById("environment").value;
+
+               const messageEl = document.getElementById("support-message");
+               messageEl.textContent = "Submitting your request...";
+
+               try {
+                    const res = await fetch("/create-issue", {
+                         method: "POST",
+                         headers: { "Content-Type": "application/json" },
+                         body: JSON.stringify({ title, body: description + `\n\nEnvironment: ${environment}` })
+                    });
+
+                    if (res.ok) {
+                         messageEl.textContent = "✅ Your support request has been submitted.";
+                         document.getElementById("support-form").reset();
+                    } else {
+                         messageEl.textContent = "❌ There was an error submitting your request.";
+                    }
+               } catch (err) {
+                    console.error(err);
+                    messageEl.textContent = "❌ Could not connect to the server.";
+               }
+          });
+     </script>
 </body>
 
 </html>

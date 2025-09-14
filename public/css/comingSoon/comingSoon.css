@@ -1,0 +1,14 @@
+ .coming-soon {
+      text-align: center;
+      padding: 5rem 1rem;
+      color: #333;
+    }
+    .coming-soon h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #0081AB;
+    }
+    .coming-soon p {
+      font-size: 1.25rem;
+      color: #555;
+    }

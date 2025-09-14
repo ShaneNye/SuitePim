@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Validation</title>
+    <script src="/js/header.js"></script>
+    <script src="/js/footerStatus.js"></script>
+    <script type="module" src="/js/validation.js"></script>
+    <link rel="stylesheet" href="/css/home/home.css">
+    <link rel="stylesheet" href="/css/productData/table.css">
+</head>
+
+<body>
+    <div id="header-container"></div>
+
+    <div class="page-title">
+        <h1 id="page-title">Validation</h1>
+    </div>
+
+    <!-- 👇 Context / Help section -->
+    <div class="context-box">
+        <h2>What is this feature?</h2>
+        <p>
+            The Validation tool checks inventory items against required NetSuite fields.
+            If a field is missing or invalid, it will display a <span style="color:red;">✗</span>.
+            You can review these results in the table below and use the
+            <strong>Push Missing Data</strong> button to automatically update
+            NetSuite with default values (for example, enabling checkboxes or
+            populating missing UPC / Web SKU fields).
+        </p>
+        <p>
+            Use this tool to quickly identify data quality issues and ensure that
+            items are ready for downstream processes like <em>Web Management</em> and
+            <em>Product Data exports</em>.
+        </p>
+    </div>
+
+    <div id="table-data" class="table-data"></div>
+    <div id="footer-container"></div>
+</body>
+
+</html>

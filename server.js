@@ -9,6 +9,10 @@ import crypto from "crypto";
 import { fileURLToPath } from "url";
 import { users } from "./users.js";
 import { fieldMap } from "./public/js/fieldMap.js";
+import dotenv from "dotenv";
+dotenv.config({ path: "./git.env" });
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -118,9 +122,14 @@ app.post("/login", (req, res) => {
 
     res.json({ success: true });
   } else {
+    // ❌ bad login → clear session completely
+    req.session.user = null;
+    req.session.environment = null;
+
     res.json({ success: false, message: "Invalid username or password!" });
   }
 });
+
 
 
 // return username + environment
@@ -134,6 +143,171 @@ app.get("/get-user", (req, res) => {
     res.json({ username: null });
   }
 });
+
+/* -----------------------------
+   Support: Create GitHub Issue
+------------------------------*/
+// server.js (near the top if needed)
+// If on Node < 18, ensure you import node-fetch:
+// import fetch from "node-fetch";
+
+function slugifyUser(u = "") {
+  return u.toLowerCase().trim()
+    .replace(/\s+/g, "-")       // spaces -> hyphens
+    .replace(/[^a-z0-9\-_.]/g, ""); // strip weird chars but keep - _ .
+}
+
+async function ensureLabelExists({ owner, repo, token, name, color = "ededed", description = "" }) {
+  // Try to get the label
+  const getRes = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/labels/${encodeURIComponent(name)}`,
+    {
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github+json",
+      }
+    }
+  );
+  if (getRes.status === 200) return; // already exists
+
+  // Create it if missing
+  await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/labels`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `token ${token}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name, color, description }),
+    }
+  );
+}
+
+// -----------------------------
+// Create GitHub Issue (update)
+// -----------------------------
+app.post("/create-issue", async (req, res) => {
+  const { title, body } = req.body;
+
+  const appUser = req.session?.user?.username || "Unknown";
+  const environment = (req.session?.environment || "Sandbox").toLowerCase(); // "sandbox" | "production"
+
+  const owner = process.env.GITHUB_OWNER;
+  const repo  = process.env.GITHUB_REPO;
+  const token = process.env.GITHUB_TOKEN;
+
+  // labels we want to attach
+  const appUserLabel = `appuser:${slugifyUser(appUser)}`;
+  const envLabel = environment; // "sandbox" or "production"
+  const labels = ["alpha-feedback", envLabel, appUserLabel];
+
+  try {
+    // Ensure labels exist (lazy create)
+    await ensureLabelExists({
+      owner, repo, token, name: "alpha-feedback", color: "0081AB", description: "SuitePim alpha feedback"
+    });
+    await ensureLabelExists({
+      owner, repo, token, name: envLabel, color: envLabel === "production" ? "d73a4a" : "a2eeef",
+      description: envLabel === "production" ? "Production environment" : "Sandbox environment"
+    });
+    await ensureLabelExists({
+      owner, repo, token, name: appUserLabel, color: "ededed", description: "SuitePim reporter"
+    });
+
+    // Keep body clean (only the description)
+    const fullBody = body;
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/issues`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, body: fullBody, labels }),
+      }
+    );
+
+    const data = await ghRes.json();
+
+    if (ghRes.ok) {
+      res.json({ success: true, issueUrl: data.html_url });
+    } else {
+      console.error("Create issue failed:", data);
+      res.status(500).json({ success: false, error: data });
+    }
+  } catch (err) {
+    console.error("GitHub issue creation failed:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+
+// -----------------------------
+// Get open issues (update)
+// -----------------------------
+app.get("/issues", async (req, res) => {
+  try {
+    const owner = process.env.GITHUB_OWNER;
+    const repo  = process.env.GITHUB_REPO;
+    const token = process.env.GITHUB_TOKEN;
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/issues?state=open`,
+      {
+        headers: {
+          "Authorization": `token ${token}`,
+          "Accept": "application/vnd.github+json",
+        },
+      }
+    );
+
+    const data = await ghRes.json();
+
+    const issues = data.map(issue => {
+      const labelNames = (issue.labels || []).map(l => l.name);
+      // Extract appUser from label like "appuser:alice-jones"
+      let appUser = null;
+      const userLabel = labelNames.find(n => /^appuser:/i.test(n));
+      if (userLabel) {
+        appUser = userLabel.split(":")[1] || "";
+        appUser = appUser.replace(/-/g, " ").trim(); // show nicely
+      } else if (issue.body) {
+        // Fallback for older tickets
+        const m = issue.body.match(/(Raised by|Reported by):\s*(.+)/i);
+        if (m) appUser = m[2].trim();
+      }
+
+      // Infer environment from labels
+      let environment = null;
+      if (labelNames.includes("production")) environment = "Production";
+      else if (labelNames.includes("sandbox")) environment = "Sandbox";
+
+      return {
+        number: issue.number,
+        title: issue.title,
+        body: issue.body,
+        user: issue.user,             // GitHub account (token owner), kept for reference
+        created_at: issue.created_at,
+        labels: labelNames,
+        appUser,                       // <- SuitePim user
+        environment                    // <- Sandbox/Production
+      };
+    });
+
+    res.json(issues);
+  } catch (err) {
+    console.error("Failed to fetch issues:", err);
+    res.status(500).json({ error: "Failed to fetch issues" });
+  }
+});
+
+
+
 
 
 app.post("/logout", (req, res) => {
@@ -157,6 +331,103 @@ app.get("/", (req, res) => {
 app.get("/fieldmap", authMiddleware, (req, res) => {
   res.json(fieldMap);
 });
+/* -----------------------------
+   GitHub Issues Integration
+------------------------------*/
+
+// Get open issues
+app.get("/issues", async (req, res) => {
+  try {
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues?state=open`,
+      {
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+        },
+      }
+    );
+
+    const data = await ghRes.json();
+
+    // Make sure we return the GitHub "number" field (needed for comments API)
+    const issues = data.map(issue => ({
+      number: issue.number,          // ✅ required
+      title: issue.title,
+      body: issue.body,
+      user: issue.user,
+      created_at: issue.created_at,
+      labels: issue.labels.map(l => l.name),
+    }));
+
+    res.json(issues);
+  } catch (err) {
+    console.error("Failed to fetch issues:", err);
+    res.status(500).json({ error: "Failed to fetch issues" });
+  }
+});
+
+// Get comments for a specific issue
+app.get("/issues/:number/comments", async (req, res) => {
+  try {
+    const { number } = req.params;
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${number}/comments`,
+      {
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+        },
+      }
+    );
+
+    const data = await ghRes.json();
+    res.json(data);
+  } catch (err) {
+    console.error("Failed to fetch issue comments:", err);
+    res.status(500).json({ error: "Failed to fetch comments" });
+  }
+});
+
+// Post a new comment to a specific issue
+app.post("/issues/:number/comment", async (req, res) => {
+  try {
+    const { number } = req.params;
+    const { body } = req.body;
+    const appUser = req.session?.user?.username || "Unknown";
+
+    const commentBody = `**[${appUser}]**\n${body}`;
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${number}/comments`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body: commentBody }),
+      }
+    );
+
+    const data = await ghRes.json();
+
+    if (ghRes.ok) {
+      res.json({ success: true, comment: data });
+    } else {
+      console.error("GitHub error:", data);
+      res.status(500).json({ success: false, error: data });
+    }
+  } catch (err) {
+    console.error("Failed to post comment:", err);
+    res.status(500).json({ error: "Failed to post comment" });
+  }
+});
+
+
+
 
 /* -----------------------------
    Job Queue System
@@ -179,7 +450,7 @@ async function runNextJob() {
   job.startedAt = new Date();
 
   const results = [];
-  const { rows, user, envConfig, environment } = job;
+  const { rows, user, envConfig, environment, type } = job;
 
   console.log(`\n🌐 Environment: ${environment} (${envConfig.accountDash})`);
   console.log(`👤 User: ${user.username}`);
@@ -188,6 +459,60 @@ async function runNextJob() {
   for (const row of rows) {
     if (!jobs[jobId]) return; // cancelled mid-run
 
+    // --- Validation job branch ---
+    if (type === "validation") {
+      const rowResult = {
+        internalid: row.internalid,
+        status: "Pending",
+        response: null,
+      };
+
+      try {
+        if (!row.internalid) {
+          rowResult.status = "Skipped";
+          rowResult.response = { reason: "Missing Internal ID" };
+          results.push(rowResult);
+          continue;
+        }
+
+        const payload = row.fields || {};
+        const url = `${envConfig.restUrl}/inventoryItem/${row.internalid}`;
+        const { tokenId, tokenSecret } = user;
+
+        console.log(`➡️ [${environment}] PATCH ${url}`);
+        console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
+
+        const response = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig),
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const text = await response.text();
+        try {
+          rowResult.response = text ? JSON.parse(text) : { status: "No Content (204)" };
+        } catch {
+          rowResult.response = text || { status: "No Content (204)" };
+        }
+
+        rowResult.status = "Success";
+        console.log(`⬅️ [${environment}] Response:`, rowResult.response);
+      } catch (err) {
+        rowResult.status = "Error";
+        rowResult.response = String(err);
+        console.error(`❌ Exception for item ${row.internalid}:`, err);
+      }
+
+      results.push(rowResult);
+      job.processed++;
+      continue; // go to next row
+    }
+
+    // --- Default branch: ProductData job ---
     const rowResult = {
       itemId: row["Item ID"],
       status: "Pending",
@@ -289,7 +614,6 @@ async function runNextJob() {
             const selfLink = item.links?.find((l) => l.rel === "self")?.href;
             if (!selfLink) continue;
 
-            // ✅ PATCH only Base Price rows (pricelevel=1)
             if (selfLink.includes("pricelevel=1")) {
               const currentRes = await fetch(selfLink, {
                 method: "GET",
@@ -353,10 +677,8 @@ async function runNextJob() {
         }
       }
 
-      // ✅ Normalize final row status
       if (rowResult.response.error) {
         rowResult.status = "Error";
-        console.error(`❌ Error flagged for item ${rowResult.itemId}:`, rowResult.response.error);
       } else if (rowResult.response.main || rowResult.response.prices.length > 0) {
         rowResult.status = "Success";
       } else {
@@ -378,6 +700,7 @@ async function runNextJob() {
   jobQueue.shift();
   runNextJob();
 }
+
 
 
 // enqueue job with the current env
@@ -415,6 +738,43 @@ app.post("/push-updates", authMiddleware, (req, res) => {
     queueTotal: jobQueue.length,
   });
 });
+
+// enqueue validation job
+app.post("/push-validation", authMiddleware, (req, res) => {
+  const rowsToPush = req.body.rows;
+  if (!rowsToPush || rowsToPush.length === 0) {
+    return res.status(400).json({ success: false, message: "No rows to push" });
+  }
+
+  const jobId = createJobId();
+  const envConfig = getEnvConfig(req); // Sandbox/Prod
+  const environment = req.session.environment || "Sandbox";
+
+  jobs[jobId] = {
+    type: "validation",          // 👈 this is critical
+    status: "pending",
+    total: rowsToPush.length,
+    processed: 0,
+    results: [],
+    rows: rowsToPush,
+    user: req.session.user,
+    envConfig,
+    environment,
+    createdAt: new Date(),
+  };
+
+  jobQueue.push(jobId);
+  if (jobQueue.length === 1) runNextJob();
+
+  res.json({
+    success: true,
+    message: `Validation job queued with ${rowsToPush.length} row(s)`,
+    jobId,
+    queuePos: jobQueue.indexOf(jobId) + 1,
+    queueTotal: jobQueue.length,
+  });
+});
+
 
 
 app.get("/push-status/:jobId", authMiddleware, (req, res) => {

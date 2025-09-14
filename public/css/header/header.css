@@ -6,86 +6,123 @@
 }
 
 * {
-    padding: 0px;
-    margin: 0px;
+    padding: 0;
+    margin: 0;
     font-family: 'ProximaNova', sans-serif;
 }
 
 .header {
-    background-color: #0081AB;
+    background: linear-gradient(180deg, #0081AB 0%, #006F91 100%);
     color: white;
     position: relative;
     box-shadow:
         inset 0 -3px 6px rgba(0, 0, 0, 0.2),
         0 4px 8px rgba(0, 0, 0, 0.15);
-
-    background: linear-gradient(180deg, #0081AB 0%, #006F91 100%);
-
-    .title {
-        width: fit-content;
-        text-align: center;
-        padding: 1rem;
-        font-weight: bold;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-
-        hr {
-            margin: .5rem;
-            border: 2px solid #FFD700;
-            border-radius: 5px;;
-        }
-
-    }
-
-    .page-title {
-        text-align: right;
-    }
-
 }
 
+.header .title {
+    width: fit-content;
+    text-align: center;
+    padding: 1rem;
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
 
+.header .title hr {
+    margin: .5rem;
+    border: 2px solid #FFD700;
+    border-radius: 5px;
+}
+
+.header .page-title {
+    text-align: right;
+}
+
+/* --- Main nav --- */
 .main-nav {
     opacity: 0;
     max-height: 0;
     overflow: hidden;
-    background-color: #F2F2F2;
-    color: #333333;
-    padding: 0rem 4rem;
-    transition: opacity 1s, max-height 1s;
-
-    /* Add subtle depth */
-    box-shadow: 
-        inset 0 2px 4px rgba(0,0,0,0.05),  /* subtle inner shadow for depth */
-        0 4px 6px rgba(0,0,0,0.1);         /* soft outer shadow for floating effect */
-
-    /* Optional: slight gradient for more dimension */
     background: linear-gradient(180deg, #F2F2F2 0%, #EAEAEA 100%);
+    color: #333333;
+    padding: 0 2rem;
+    transition: opacity 0.4s ease, max-height 0.4s ease;
 
-    ul {
-        display: flex;
-        justify-content: space-between;
-    }
-
-    li {
-        list-style: none;
-        padding: 1rem;
-        transition: 0.5s;
-    }
-
-    li:hover {
-        border-radius: 5px;
-        background-color: #FFD700;
-        cursor: pointer;
-    }
-
+    box-shadow:
+        inset 0 2px 4px rgba(0,0,0,0.05),
+        0 4px 6px rgba(0,0,0,0.1);
 }
 
-.header:hover .main-nav {
-    opacity: 1;
-    max-height: 500px;
+.main-nav ul {
+    display: flex;
+    justify-content: space-around;
+    position: relative;
+}
+
+/* Top-level nav items */
+.main-nav > ul > li {
+    list-style: none;
+    padding: 0.75rem 1rem; /* consistent compact padding */
+    transition: background 0.3s;
+    position: relative;
+}
+
+.main-nav > ul > li:hover {
+    border-radius: 5px;
+    background-color: #FFD700;
+    cursor: pointer;
 }
 
 a {
     color: #333333;
     text-decoration: none;
+    display: block;
 }
 
+/* Show nav when hovering header or nav */
+.header:hover .main-nav,
+.main-nav:hover {
+    opacity: 1;
+    max-height: 500px;
+    overflow: visible;
+}
+
+/* --- Dropdown --- */
+.main-nav .dropdown { position: relative; }
+
+.main-nav .dropdown > a {
+    padding: 0.75rem 1rem; /* match siblings */
+    line-height: 1.2;
+}
+
+/* Submenu hidden by default */
+.main-nav .dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% - 2px); /* closer to parent */
+    left: 0;
+    background: #F2F2F2;
+    min-width: 180px;
+    margin: 0;
+    padding: 0.25rem 0;
+    list-style: none;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    flex-direction: column;
+    z-index: 1000;
+}
+
+/* Submenu items */
+.main-nav .dropdown-menu li {
+    padding: 0.5rem 1rem;
+    white-space: nowrap;
+}
+
+.main-nav .dropdown-menu li:hover {
+    background-color: #FFD700;
+}
+
+/* Show submenu on hover */
+.main-nav .dropdown:hover .dropdown-menu {
+    display: flex;
+}
