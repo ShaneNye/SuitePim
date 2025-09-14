@@ -66,5 +66,8 @@ export const fieldMap = [
   { name: "Lead Time", internalid: "custitem_sb_leadtime_ltd", fieldType: "List/Record", jsonFeed: urlFor("Lead Time") },
   { name: "Preferred Supplier", internalid: "vendor", fieldType: "List/Record", jsonFeed: urlFor("Preferred Supplier") },
 
-  { name: "inactive", internalid: "isinactive", fieldType: "Checkbox" },
+  { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
+  { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
+  { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
+
 ];
