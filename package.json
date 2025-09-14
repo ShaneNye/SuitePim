@@ -49,9 +49,13 @@
       "!win-unpacked/**",
       "!**/*.map"
     ],
-    "extraResources": [
-      "latest.yml",
-      "*.blockmap"
+     "extraResources": [
+    "latest.yml",
+    "*.blockmap",
+    {
+      "from": ".env",
+      "to": ".env"
+    }
     ],
     "directories": {
       "output": "release"

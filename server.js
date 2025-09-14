@@ -10,7 +10,8 @@ import { fileURLToPath } from "url";
 import { users } from "./users.js";
 import { fieldMap } from "./public/js/fieldMap.js";
 import dotenv from "dotenv";
-dotenv.config({ path: "./git.env" });
+dotenv.config(); // looks for .env by default
+
 
 
 
@@ -145,139 +146,162 @@ app.get("/get-user", (req, res) => {
 });
 
 /* -----------------------------
-   Support: Create GitHub Issue
+   Support: GitHub Issues
 ------------------------------*/
-// server.js (near the top if needed)
-// If on Node < 18, ensure you import node-fetch:
-// import fetch from "node-fetch";
 
+// Utility: normalize usernames for labels
 function slugifyUser(u = "") {
-  return u.toLowerCase().trim()
+  return u
+    .toLowerCase()
+    .trim()
     .replace(/\s+/g, "-")       // spaces -> hyphens
     .replace(/[^a-z0-9\-_.]/g, ""); // strip weird chars but keep - _ .
 }
 
+// Ensure a label exists in GitHub
 async function ensureLabelExists({ owner, repo, token, name, color = "ededed", description = "" }) {
-  // Try to get the label
-  const getRes = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/labels/${encodeURIComponent(name)}`,
-    {
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github+json",
+  try {
+    const getRes = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/labels/${encodeURIComponent(name)}`,
+      {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github+json",
+        },
       }
-    }
-  );
-  if (getRes.status === 200) return; // already exists
+    );
 
-  // Create it if missing
-  await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/labels`,
-    {
-      method: "POST",
-      headers: {
-        "Authorization": `token ${token}`,
-        "Accept": "application/vnd.github+json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name, color, description }),
+    if (getRes.status === 200) return; // already exists
+
+    // Only create if not found (ignore 404 is expected)
+    if (getRes.status === 404) {
+      await fetch(`https://api.github.com/repos/${owner}/${repo}/labels`, {
+        method: "POST",
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, color, description }),
+      });
     }
-  );
+  } catch (err) {
+    console.error(`❌ ensureLabelExists failed for ${name}:`, err);
+  }
 }
 
 // -----------------------------
-// Create GitHub Issue (update)
+// Create GitHub Issue
 // -----------------------------
 app.post("/create-issue", async (req, res) => {
   const { title, body } = req.body;
 
   const appUser = req.session?.user?.username || "Unknown";
-  const environment = (req.session?.environment || "Sandbox").toLowerCase(); // "sandbox" | "production"
+  const environment = (req.session?.environment || "Sandbox").toLowerCase();
 
   const owner = process.env.GITHUB_OWNER;
-  const repo  = process.env.GITHUB_REPO;
+  const repo = process.env.GITHUB_REPO;
   const token = process.env.GITHUB_TOKEN;
 
-  // labels we want to attach
+  if (!owner || !repo || !token) {
+    return res.status(500).json({ success: false, error: "Missing GitHub configuration" });
+  }
+
   const appUserLabel = `appuser:${slugifyUser(appUser)}`;
-  const envLabel = environment; // "sandbox" or "production"
+  const envLabel = environment;
   const labels = ["alpha-feedback", envLabel, appUserLabel];
 
   try {
-    // Ensure labels exist (lazy create)
+    // Ensure required labels exist
     await ensureLabelExists({
-      owner, repo, token, name: "alpha-feedback", color: "0081AB", description: "SuitePim alpha feedback"
+      owner,
+      repo,
+      token,
+      name: "alpha-feedback",
+      color: "0081AB",
+      description: "SuitePim alpha feedback",
     });
     await ensureLabelExists({
-      owner, repo, token, name: envLabel, color: envLabel === "production" ? "d73a4a" : "a2eeef",
-      description: envLabel === "production" ? "Production environment" : "Sandbox environment"
+      owner,
+      repo,
+      token,
+      name: envLabel,
+      color: envLabel === "production" ? "d73a4a" : "a2eeef",
+      description: envLabel === "production" ? "Production environment" : "Sandbox environment",
     });
     await ensureLabelExists({
-      owner, repo, token, name: appUserLabel, color: "ededed", description: "SuitePim reporter"
+      owner,
+      repo,
+      token,
+      name: appUserLabel,
+      color: "ededed",
+      description: "SuitePim reporter",
     });
 
-    // Keep body clean (only the description)
-    const fullBody = body;
-
-    const ghRes = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github+json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ title, body: fullBody, labels }),
-      }
-    );
+    const ghRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+      method: "POST",
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, body, labels }),
+    });
 
     const data = await ghRes.json();
 
     if (ghRes.ok) {
       res.json({ success: true, issueUrl: data.html_url });
     } else {
-      console.error("Create issue failed:", data);
+      console.error("❌ Create issue failed:", data);
       res.status(500).json({ success: false, error: data });
     }
   } catch (err) {
-    console.error("GitHub issue creation failed:", err);
+    console.error("❌ GitHub issue creation error:", err);
     res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
-
 // -----------------------------
-// Get open issues (update)
+// Get open issues
 // -----------------------------
 app.get("/issues", async (req, res) => {
-  try {
-    const owner = process.env.GITHUB_OWNER;
-    const repo  = process.env.GITHUB_REPO;
-    const token = process.env.GITHUB_TOKEN;
+  const owner = process.env.GITHUB_OWNER;
+  const repo = process.env.GITHUB_REPO;
+  const token = process.env.GITHUB_TOKEN;
 
+  if (!owner || !repo || !token) {
+    return res.status(500).json({ error: "Missing GitHub configuration" });
+  }
+
+  try {
     const ghRes = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/issues?state=open`,
       {
         headers: {
-          "Authorization": `token ${token}`,
-          "Accept": "application/vnd.github+json",
+          Authorization: `token ${token}`,
+          Accept: "application/vnd.github+json",
         },
       }
     );
 
     const data = await ghRes.json();
 
-    const issues = data.map(issue => {
-      const labelNames = (issue.labels || []).map(l => l.name);
-      // Extract appUser from label like "appuser:alice-jones"
+    if (!ghRes.ok) {
+      console.error("❌ GitHub issues fetch failed:", data);
+      return res.status(500).json({ error: "Failed to fetch issues" });
+    }
+
+    const issues = data.map((issue) => {
+      const labelNames = (issue.labels || []).map((l) => l.name);
+
+      // Extract SuitePim username from label
       let appUser = null;
-      const userLabel = labelNames.find(n => /^appuser:/i.test(n));
+      const userLabel = labelNames.find((n) => /^appuser:/i.test(n));
       if (userLabel) {
         appUser = userLabel.split(":")[1] || "";
-        appUser = appUser.replace(/-/g, " ").trim(); // show nicely
+        appUser = appUser.replace(/-/g, " ").trim();
       } else if (issue.body) {
-        // Fallback for older tickets
         const m = issue.body.match(/(Raised by|Reported by):\s*(.+)/i);
         if (m) appUser = m[2].trim();
       }
@@ -291,25 +315,24 @@ app.get("/issues", async (req, res) => {
         number: issue.number,
         title: issue.title,
         body: issue.body,
-        user: issue.user,             // GitHub account (token owner), kept for reference
+        user: issue.user,
         created_at: issue.created_at,
         labels: labelNames,
-        appUser,                       // <- SuitePim user
-        environment                    // <- Sandbox/Production
+        appUser,
+        environment,
       };
     });
 
     res.json(issues);
   } catch (err) {
-    console.error("Failed to fetch issues:", err);
+    console.error("❌ Failed to fetch issues:", err);
     res.status(500).json({ error: "Failed to fetch issues" });
   }
 });
 
-
-
-
-
+// -----------------------------
+// Logout
+// -----------------------------
 app.post("/logout", (req, res) => {
   req.session.destroy((err) => {
     if (err) return res.status(500).send("Error logging out");

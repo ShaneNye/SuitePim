@@ -15,6 +15,7 @@ yarn-error.log*
 /*.dmg
 /*.AppImage
 *.blockmap
+.env
 # ⬅️ keep latest.yml files so auto-updater can find them
 
 # OS junk

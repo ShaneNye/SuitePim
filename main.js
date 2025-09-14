@@ -5,6 +5,10 @@ import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import updaterPkg from "electron-updater";
+import dotenv from "dotenv";
+
+dotenv.config(); // ✅ load .env into process.env
+
 const { autoUpdater } = updaterPkg;
 
 const __filename = fileURLToPath(import.meta.url);
@@ -17,11 +21,10 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 2100,
     height: 900,
-     icon: path.join(__dirname, "public", "assets", "moon-man-logo.ico"),
+    icon: path.join(__dirname, "public", "assets", "moon-man-logo.ico"),
     webPreferences: {
-      nodeIntegration: false, // keep secure
+      nodeIntegration: false,
       contextIsolation: true,
-      // If you later add preload for IPC progress UI:
       // preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -31,17 +34,14 @@ function createWindow() {
 
 // --- Auto-update wiring ---
 function setupAutoUpdater() {
-  // Recommended on Windows so notifications & identity work correctly
   if (process.platform === "win32") {
-    app.setAppUserModelId("com.sussexbeds.suitepim"); // match build.appId later
+    app.setAppUserModelId("com.sussexbeds.suitepim");
   }
 
-  // Sensible defaults
-  autoUpdater.autoDownload = true;           // download in background
-  autoUpdater.autoInstallOnAppQuit = true;   // install when the app quits
-  autoUpdater.allowPrerelease = false;       // flip to true for beta channels
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
 
-  // Optional: forward basic events (hook into your UI if you want)
   autoUpdater.on("checking-for-update", () => {
     // mainWindow?.webContents.send("update:status", "checking");
   });
@@ -52,49 +52,46 @@ function setupAutoUpdater() {
     // mainWindow?.webContents.send("update:none", info);
   });
   autoUpdater.on("download-progress", (p) => {
-    // mainWindow?.webContents.send("update:progress", p); // p.percent, p.bytesPerSecond
+    // mainWindow?.webContents.send("update:progress", p);
   });
-
   autoUpdater.on("error", (err) => {
-    // You can log or surface this if helpful
-    // mainWindow?.webContents.send("update:error", String(err));
+    console.error("Updater error:", err);
   });
 
-  autoUpdater.on("update-downloaded", async (info) => {
-    // Prompt the user to restart now (you can also do silent install on quit)
+  autoUpdater.on("update-downloaded", async () => {
     const { response } = await dialog.showMessageBox({
       type: "question",
       buttons: ["Restart now", "Later"],
       defaultId: 0,
       message: "Update ready",
-      detail:
-        "A new version has been downloaded. Restart to apply it?",
+      detail: "A new version has been downloaded. Restart to apply it?",
     });
     if (response === 0) {
-      autoUpdater.quitAndInstall(); // Restarts the app and installs the update
+      autoUpdater.quitAndInstall();
     }
   });
 
-  // Kick off the check a moment after ready so the window is already showing
   setTimeout(() => {
     autoUpdater.checkForUpdatesAndNotify();
   }, 2000);
 }
-// --- end updater wiring ---
 
 app.whenReady().then(() => {
-  // Ensure logs directory exists
-const logDir = path.join(app.getPath("userData"), "logs");
+  const logDir = path.join(app.getPath("userData"), "logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir);
 
   const logFile = fs.createWriteStream(path.join(logDir, "server.log"), {
-    flags: "a", // append
+    flags: "a",
   });
 
-  // ✅ Start server.js as a child Node process
-  serverProcess = fork(path.join(__dirname, "server.js"));
+  // ✅ Start server.js as a child Node process, passing env
+  serverProcess = fork(path.join(__dirname, "server.js"), {
+    env: {
+      ...process.env, // includes GITHUB_TOKEN etc
+      NODE_ENV: process.env.NODE_ENV || "production",
+    },
+  });
 
-  // Pipe logs to file
   serverProcess.stdout?.on("data", (data) => {
     const msg = data.toString();
     logFile.write(`[SERVER STDOUT] ${msg}`);
@@ -116,7 +113,7 @@ const logDir = path.join(app.getPath("userData"), "logs");
   });
 
   createWindow();
-  setupAutoUpdater(); // ⬅️ start auto-update lifecycle
+  setupAutoUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
