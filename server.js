@@ -7,19 +7,60 @@ import fetch from "node-fetch";
 import OAuth from "oauth-1.0a";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
-import { users } from "./users.js";
-import { fieldMap } from "./public/js/fieldMap.js";
 import dotenv from "dotenv";
-dotenv.config(); // looks for .env by default
 
+// ✅ Load .env safely (no crash if missing)
+import fs from "fs";
 
+// ✅ Safe .env loader (works in dev + packaged)
+try {
+  // Packaged app → resources/.env
+  const packagedEnv = path.join(process.resourcesPath || "", ".env");
+  if (process.resourcesPath && fs.existsSync(packagedEnv)) {
+    dotenv.config({ path: packagedEnv });
+    console.log("✅ Loaded .env from packaged:", packagedEnv);
+  } else {
+    // Dev → project root
+    const devEnv = path.join(__dirname, ".env");
+    if (fs.existsSync(devEnv)) {
+      dotenv.config({ path: devEnv });
+      console.log("✅ Loaded .env from dev:", devEnv);
+    } else {
+      console.warn("⚠️ No .env found — GitHub features may not work");
+    }
+  }
+} catch (err) {
+  console.error("❌ Failed to load .env:", err.message);
+}
 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// ✅ Dynamic imports for local modules (safe in dev + packaged)
+let users = [];
+try {
+  users = (await import("./users.js")).users;
+  console.log("✅ Loaded users.js");
+} catch (err) {
+  console.error("❌ Failed to load users.js:", err.message);
+}
+
+let fieldMap = [];
+try {
+  fieldMap = (await import("./public/js/fieldMap.js")).fieldMap;
+  console.log("✅ Loaded fieldMap.js");
+} catch (err) {
+  console.error("❌ Failed to load fieldMap.js:", err.message);
+}
+
 const app = express();
 const PORT = 3000;
+
+// ✅ Serve static files
+const staticPath = path.join(__dirname, "public");
+app.use(express.static(staticPath));
+console.log("📂 Serving static files from:", staticPath);
 
 /* -----------------------------
    NetSuite Environment Configs
@@ -99,6 +140,7 @@ function authMiddleware(req, res, next) {
 /* -----------------------------
    Auth
 ------------------------------*/
+
 app.post("/login", (req, res) => {
   const { username, password, environment } = req.body;
   const user = users.find((u) => u.username === username && u.password === password);
@@ -130,6 +172,18 @@ app.post("/login", (req, res) => {
     res.json({ success: false, message: "Invalid username or password!" });
   }
 });
+
+app.get("/env-check", (req, res) => {
+  res.json({
+    owner: process.env.GITHUB_OWNER,
+    repo: process.env.GITHUB_REPO,
+    hasToken: !!process.env.GITHUB_TOKEN,
+    tokenPreview: process.env.GITHUB_TOKEN
+      ? process.env.GITHUB_TOKEN.slice(0, 6) + "...(hidden)"
+      : "MISSING"
+  });
+});
+
 
 
 
@@ -391,9 +445,16 @@ app.get("/issues", async (req, res) => {
 });
 
 // Get comments for a specific issue
+// Get comments for a specific issue
 app.get("/issues/:number/comments", async (req, res) => {
   try {
     const { number } = req.params;
+
+    console.log("🔍 Fetching comments for issue:", number, {
+      owner: process.env.GITHUB_OWNER,
+      repo: process.env.GITHUB_REPO,
+      hasToken: !!process.env.GITHUB_TOKEN
+    });
 
     const ghRes = await fetch(
       `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${number}/comments`,
@@ -406,12 +467,71 @@ app.get("/issues/:number/comments", async (req, res) => {
     );
 
     const data = await ghRes.json();
+
+    if (!ghRes.ok) {
+      console.error("❌ GitHub comments fetch failed:", data);
+      return res.status(ghRes.status).json({
+        error: "GitHub error",
+        status: ghRes.status,
+        details: data
+      });
+    }
+
     res.json(data);
   } catch (err) {
-    console.error("Failed to fetch issue comments:", err);
-    res.status(500).json({ error: "Failed to fetch comments" });
+    console.error("❌ Failed to fetch issue comments:", err);
+    res.status(500).json({ error: "Failed to fetch comments", details: String(err) });
   }
 });
+
+// Post a new comment to a specific issue
+app.post("/issues/:number/comment", async (req, res) => {
+  try {
+    const { number } = req.params;
+    const { body } = req.body;
+    const appUser = req.session?.user?.username || "Unknown";
+
+    const commentBody = `**[${appUser}]**\n${body}`;
+
+    console.log("✍️ Posting comment on issue:", number, {
+      appUser,
+      owner: process.env.GITHUB_OWNER,
+      repo: process.env.GITHUB_REPO,
+      hasToken: !!process.env.GITHUB_TOKEN
+    });
+
+    const ghRes = await fetch(
+      `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${number}/comments`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body: commentBody }),
+      }
+    );
+
+    const data = await ghRes.json();
+
+    if (ghRes.ok) {
+      res.json({ success: true, comment: data });
+    } else {
+      console.error("❌ GitHub post comment failed:", data);
+      res.status(ghRes.status).json({
+        success: false,
+        error: "GitHub error",
+        status: ghRes.status,
+        details: data
+      });
+    }
+  } catch (err) {
+    console.error("❌ Failed to post comment:", err);
+    res.status(500).json({ error: "Failed to post comment", details: String(err) });
+  }
+});
+
 
 // Post a new comment to a specific issue
 app.post("/issues/:number/comment", async (req, res) => {
@@ -798,7 +918,16 @@ app.post("/push-validation", authMiddleware, (req, res) => {
   });
 });
 
-
+app.get("/debug-env", (req, res) => {
+  res.json({
+    owner: process.env.GITHUB_OWNER,
+    repo: process.env.GITHUB_REPO,
+    hasToken: !!process.env.GITHUB_TOKEN,
+    tokenPreview: process.env.GITHUB_TOKEN
+      ? process.env.GITHUB_TOKEN.slice(0, 6) + "...(hidden)"
+      : "MISSING"
+  });
+});
 
 app.get("/push-status/:jobId", authMiddleware, (req, res) => {
   const job = jobs[req.params.jobId];

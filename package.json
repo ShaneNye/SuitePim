@@ -1,6 +1,6 @@
 {
   "name": "suitepim",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "type": "module",
   "main": "main.js",
   "description": "SuitePim Desktop App",
@@ -36,26 +36,28 @@
     "appId": "com.sussexbeds.suitepim",
     "productName": "SuitePim",
     "files": [
-      "public/**/*",
-      "SuiteScripts/**/*",
       "main.js",
-      "public/fonts/**/*",
       "server.js",
       "users.js",
-      "fieldMap.js",
+      "SuiteScripts/**/*",
+      "public/**/*",
       "package.json",
       "!release/**",
       "!dist/**",
       "!win-unpacked/**",
       "!**/*.map"
     ],
-     "extraResources": [
-    "latest.yml",
-    "*.blockmap",
-    {
-      "from": ".env",
-      "to": ".env"
-    }
+    "asarUnpack": [
+      "public",
+      ".env"
+    ],
+    "extraResources": [
+      "latest.yml",
+      "*.blockmap",
+      {
+        "from": ".env",
+        "to": ".env"
+      }
     ],
     "directories": {
       "output": "release"
