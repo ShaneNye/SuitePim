@@ -79,6 +79,7 @@ const NETSUITE_SANDBOX = {
   restUrl: process.env.NETSUITE_SANDBOX_URL,
 };
 
+
 const NETSUITE_PROD = {
   account: process.env.NETSUITE_PROD_ACCOUNT,
   accountDash: process.env.NETSUITE_PROD_ACCOUNT_DASH,
