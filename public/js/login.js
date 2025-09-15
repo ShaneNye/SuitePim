@@ -38,7 +38,17 @@ async function handleLogin() {
       console.log("✅ Login successful");
       localStorage.setItem("username", username);
       localStorage.setItem("environment", environment);
-      window.location.href = "/home.html";
+
+      // ✅ Show loading overlay
+      const overlay = document.getElementById("loading-overlay");
+      if (overlay) {
+        overlay.style.display = "flex";
+      }
+
+      // small delay to let spinner paint before redirect
+      setTimeout(() => {
+        window.location.href = "/home.html";
+      }, 200);
     } else {
       console.warn("❌ Login failed:", data.message);
       alert(data.message || "Login failed. Please check your credentials.");
@@ -47,28 +57,27 @@ async function handleLogin() {
     console.error("💥 Error logging in:", err);
     alert("An error occurred while logging in. Please try again.");
   } finally {
-  console.log("🔄 Resetting inputs so user can retry");
-  loginBtn.disabled = false;
-  usernameInput.disabled = false;
-  passwordInput.disabled = false;
+    console.log("🔄 Resetting inputs so user can retry");
+    loginBtn.disabled = false;
+    usernameInput.disabled = false;
+    passwordInput.disabled = false;
 
-  // ✅ force repaint/reflow
-  usernameInput.style.display = "none";
-  usernameInput.offsetHeight; // trigger reflow
-  usernameInput.style.display = "";
+    // ✅ force repaint/reflow so inputs are re-enabled correctly
+    usernameInput.style.display = "none";
+    usernameInput.offsetHeight; // trigger reflow
+    usernameInput.style.display = "";
 
-  usernameInput.focus();
+    usernameInput.focus();
+  }
 }
 
-}
-
-// --- Button click handler (prevents accidental form submit) ---
+// --- Button click handler ---
 loginBtn.addEventListener("click", (e) => {
   e.preventDefault();
   handleLogin();
 });
 
-// --- Enter key handler (prevents accidental form submit) ---
+// --- Enter key handler ---
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
     e.preventDefault();

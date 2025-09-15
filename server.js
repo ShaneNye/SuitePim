@@ -62,24 +62,31 @@ const staticPath = path.join(__dirname, "public");
 app.use(express.static(staticPath));
 console.log("📂 Serving static files from:", staticPath);
 
+const publicPath = process.env.NODE_ENV === "development"
+  ? path.join(__dirname, "public")
+  : path.join(process.resourcesPath, "public");
+
+app.use("/public", express.static(publicPath));
+
 /* -----------------------------
    NetSuite Environment Configs
 ------------------------------*/
 const NETSUITE_SANDBOX = {
-  account: "7972741_SB1",
-  accountDash: "7972741-sb1",
-  consumerKey: "0c38d6cca31b16131b85cf3ee2eb63c4926f689ba5214a92140f6aec81299eb6",
-  consumerSecret: "cefb221b37198c4d5e779855467cf6713b31aa7e78ce59c250f174b544c8c2cc",
-  restUrl: "https://7972741-sb1.suitetalk.api.netsuite.com/services/rest/record/v1",
+  account: process.env.NETSUITE_SANDBOX_ACCOUNT,
+  accountDash: process.env.NETSUITE_SANDBOX_ACCOUNT_DASH,
+  consumerKey: process.env.NETSUITE_SANDBOX_KEY,
+  consumerSecret: process.env.NETSUITE_SANDBOX_SECRET,
+  restUrl: process.env.NETSUITE_SANDBOX_URL,
 };
 
 const NETSUITE_PROD = {
-  account: "7972741",
-  accountDash: "7972741",
-  consumerKey: "4a7970825a910c35b8cf4e521c8fa3d3de31798b384d7eb4536c5fe6148fd8c1",
-  consumerSecret: "8ebf8e04f3f51685280b32e68e7a751089d33dff81ab65e0084836326175032d",
-  restUrl: "https://7972741.suitetalk.api.netsuite.com/services/rest/record/v1",
+  account: process.env.NETSUITE_PROD_ACCOUNT,
+  accountDash: process.env.NETSUITE_PROD_ACCOUNT_DASH,
+  consumerKey: process.env.NETSUITE_PROD_KEY,
+  consumerSecret: process.env.NETSUITE_PROD_SECRET,
+  restUrl: process.env.NETSUITE_PROD_URL,
 };
+
 
 // Helper to map string -> config
 function getEnvConfigFromName(name) {

@@ -1,6 +1,6 @@
 {
   "name": "suitepim",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "type": "module",
   "main": "main.js",
   "description": "SuitePim Desktop App",
@@ -41,6 +41,7 @@
       "users.js",
       "SuiteScripts/**/*",
       "public/**/*",
+      "fonts/**/*",
       "package.json",
       "!release/**",
       "!dist/**",
@@ -52,11 +53,14 @@
       ".env"
     ],
     "extraResources": [
-      "latest.yml",
-      "*.blockmap",
       {
         "from": ".env",
         "to": ".env"
+      },
+      {
+        "from": "public/fonts/",
+        "to": "fonts",
+        "filter": ["**/*"]
       }
     ],
     "directories": {
