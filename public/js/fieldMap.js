@@ -30,7 +30,28 @@ const mapenvironment = [
     ProdUrl:
       "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4352&deploy=1&compid=7972741&ns-at=AAEJ7tMQMfdQuRFm3vrD69S7SrazDWZtpj-3h8yWEw-pEo7xJpM",
   },
+  {
+    name: "Web Fabrics",
+    SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4071&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQvzlM4oJsjY9bg35LIfIJ3beDV8rr9Zb87xgSVfh4vjM",
+    ProdUrl: ""
+  }, 
+  {
+    name: "Web Images",
+    SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4071&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQvzlM4oJsjY9bg35LIfIJ3beDV8rr9Zb87xgSVfh4vjM",
+    ProdUrl: ""
+  }
 ];
+
+const imagePrefix = [
+  {
+    name: "Sandbox",
+    prefix: "https://7972741-sb1.app.netsuite.com"
+  },
+  {
+    name: "Production",
+    prefix: "https://7972741.app.netsuite.com"
+  }
+]
 
 // Determine environment safely (browser vs server)
 function currentEnvironment() {
@@ -54,7 +75,8 @@ function urlFor(name) {
 
 // --- Exported field map (shape unchanged) ---
 export const fieldMap = [
-  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text" },
+  {name: "Internal ID", internalid: "internalid", fieldType: "internalid", disableField: true },
+  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text"},
   { name: "Display Name", internalid: "displayname", fieldType: "Free-Form Text" },
   { name: "Supplier Name", internalid: "vendorname", fieldType: "Free-Form Text" },
 
@@ -69,5 +91,8 @@ export const fieldMap = [
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
   { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
-
+  { name: "Category", internalid: "custitem_sb_category", fieldType: "multiple-select", jsonFeed: urlFor("Class")},
+  {name: "Fabric", internalid: "custitem_sb_web_fabric_swatch", fieldType: "multiple-select", jsonFeed: urlFor("Web Fabrics")},
+  {name: "Woo ID", internalid: "custitem_magentoid", fieldType: "Free-Form Text", disableField: true},
+  {name: "Catalogue Image One", internalid: "custitem_sb_cat_img_one", fieldType: "image"}
 ];

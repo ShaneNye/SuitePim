@@ -660,18 +660,14 @@ async function runNextJob() {
 
       results.push(rowResult);
       job.processed++;
-      continue; // go to next row
+      continue;
     }
 
     // --- Default branch: ProductData job ---
     const rowResult = {
       itemId: row["Item ID"],
       status: "Pending",
-      response: {
-        main: null,
-        prices: [],
-        error: null,
-      },
+      response: { main: null, prices: [], error: null },
     };
 
     try {
@@ -687,30 +683,55 @@ async function runNextJob() {
       let basePriceVal;
 
       for (const field of fieldMap) {
-        const value = row[field.name];
-        if (value === undefined || value === null || value === "") continue;
-
+        // Handle Base Price specially
         if (field.name === "Base Price") {
-          const val = parseFloat(value);
+          const val = parseFloat(row[field.name]);
           if (!isNaN(val)) basePriceVal = val;
-          continue; // handled separately
+          continue;
         }
 
+        // MULTI-SELECT: wrap in { items: [...] }
+        if (field.fieldType === "multiple-select") {
+          const ids = row[`${field.name}_InternalId`];
+          if (Array.isArray(ids)) {
+            payload[field.internalid] = { items: ids.map(id => ({ id: String(id) })) };
+          }
+          continue;
+        }
+
+        // SINGLE SELECT (List/Record)
         if (field.fieldType === "List/Record") {
-          const internalId = row[`${field.name}_InternalId`] || value;
-          payload[field.internalid] = {
-            id: String(internalId),
-            refName: value,
-            type: field.internalid,
-          };
-        } else if (field.fieldType === "Currency") {
+          const internalId = row[`${field.name}_InternalId`] ?? null;
+          if (internalId !== null && internalId !== "") {
+            payload[field.internalid] = { id: String(internalId) };
+          }
+          continue;
+        }
+
+        // Other fields
+        const value = row[field.name];
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "");
+
+        if (isEmpty) continue;
+
+        if (field.fieldType === "Currency") {
           payload[field.internalid] = parseFloat(value) || 0;
         } else if (field.fieldType === "Checkbox") {
+          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
           payload[field.internalid] =
-            String(value).toLowerCase() === "true" || value === "1";
+            v === true || v === 1 || v === "true" || v === "t" || v === "1" || v === "y" || v === "yes";
         } else {
           payload[field.internalid] = String(value);
         }
+      }
+
+      // Debug payload keys
+      console.log("🧩 Payload keys:", Object.keys(payload));
+      if (payload.custitem_sb_category) {
+        console.log("🧩 custitem_sb_category:", JSON.stringify(payload.custitem_sb_category, null, 2));
       }
 
       const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
@@ -719,7 +740,7 @@ async function runNextJob() {
       console.log(`\n➡️ [${environment}] PATCH ${url}`);
       console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
 
-      // --- PATCH main record ---
+      // PATCH main record
       const response = await fetch(url, {
         method: "PATCH",
         headers: {
@@ -736,10 +757,9 @@ async function runNextJob() {
       } catch {
         rowResult.response.main = text || { status: "No Content (204)" };
       }
-
       console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
 
-      // --- Handle Base Price update ---
+      // --- Handle Base Price update (unchanged) ---
       if (basePriceVal !== undefined) {
         const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
 
@@ -823,7 +843,7 @@ async function runNextJob() {
             }
           }
         } else {
-          console.warn("⚠️ Price GET did not return expected `items` array");
+          console.warn("⚠️ Price GET did not return expected \`items\` array");
           rowResult.response.prices.push({ error: "Unexpected GET response", data: priceGetData });
         }
       }
@@ -851,6 +871,10 @@ async function runNextJob() {
   jobQueue.shift();
   runNextJob();
 }
+
+
+
+
 
 
 
