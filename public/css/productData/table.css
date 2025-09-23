@@ -654,3 +654,9 @@ select.theme-select:focus,
   border-color: #FFD700;
   box-shadow: 0 0 3px rgba(0,150,136,0.4);
 }
+.rich-preview {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.sb-description body{font-family:Arial,sans-serif;line-height:1.6}.sb-description .h1,.sb-description h1{color:#9e8a4b;font-size:35px;margin-bottom:2vw}.sb-description ul{list-style-type:square;margin-left:20px}.sb-description ul li{margin-bottom:10px}.sb-description strong{color:#4d7da8}

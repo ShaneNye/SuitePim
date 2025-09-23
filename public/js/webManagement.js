@@ -5,7 +5,7 @@ const SANDBOXjsonUrl =
   "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4070&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQ36KHWv402slQtrHVQ0QIFZOqj2KRxW39ZEthF8eqhic";
 
 const PRODjsonUrl =
-  "";
+  "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4365&deploy=1&compid=7972741&ns-at=AAEJ7tMQX3Lm8Lt3rpeFR1ezfurShY30Is8kgSGklUki_rKqMrQ";
 
 // Pick environment (default Sandbox)
 const environment = localStorage.getItem("environment") || "Sandbox";
@@ -62,6 +62,28 @@ async function loadJSONData() {
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
     fullData = await response.json();
+
+    // ✅ Normalize multiple-select fields to arrays (names + IDs)
+    fullData = fullData.map(row => {
+      fieldMap.forEach(f => {
+        if (f.fieldType === "multiple-select") {
+          const val = row[f.name];
+
+          // Normalize names
+          if (typeof val === "string") {
+            row[f.name] = val.split(",").map(s => s.trim()).filter(Boolean);
+          } else if (!Array.isArray(val)) {
+            row[f.name] = [];
+          }
+
+          // Normalize IDs
+          if (!Array.isArray(row[`${f.name}_InternalId`])) {
+            row[`${f.name}_InternalId`] = [];
+          }
+        }
+      });
+      return row;
+    });
 
     // Apply tool columns
     if (typeof window.addRetailPriceTool === "function")
@@ -128,6 +150,7 @@ async function loadJSONData() {
     spinnerMsg.textContent = "❌ Failed to load JSON data.";
   }
 }
+
 
 // --- FILTER PANEL (table-style with dynamic rows + remove buttons) ---
 async function renderFilterPanel(columns, parent) {
@@ -450,19 +473,23 @@ function renderBulkActionPanel(columns, parent) {
     columnSelect.appendChild(option);
   });
 
-  // Input (for numeric fields)
   const valueInput = document.createElement("input");
   valueInput.type = "number";
   valueInput.id = "bulk-value-input";
   valueInput.placeholder = "Enter value";
 
-  // Dropdown (for list/record fields)
   const valueSelect = document.createElement("select");
   valueSelect.id = "bulk-value-select";
   valueSelect.classList.add("theme-select");
-  valueSelect.style.display = "none"; // hidden by default
+  valueSelect.style.display = "none";
 
-  // Action dropdown
+  const valueSearch = document.createElement("input");
+  valueSearch.type = "text";
+  valueSearch.id = "bulk-value-search";
+  valueSearch.placeholder = "Search options…";
+  valueSearch.style.display = "none";
+  valueSearch.style.marginBottom = "4px";
+
   const actionSelect = document.createElement("select");
   actionSelect.id = "bulk-action-select";
   ["Set To", "Add By Value", "Add By Percent"].forEach((action) => {
@@ -472,23 +499,20 @@ function renderBulkActionPanel(columns, parent) {
     actionSelect.appendChild(option);
   });
 
+  const dynamicControls = document.createElement("div");
+  dynamicControls.id = "bulk-dynamic-controls";
+  dynamicControls.style.marginTop = "6px";
+
   const applyBtn = document.createElement("button");
   applyBtn.textContent = "Apply";
-  applyBtn.addEventListener("click", async () => {
-    const col = columnSelect.value;
-    const field = fieldMap.find((f) => f.name === col);
 
-    if (field && field.fieldType === "List/Record") {
-      applyBulkAction(col, valueSelect.value, "Set List Value");
-    } else {
-      applyBulkAction(col, valueInput.value, actionSelect.value);
-    }
-  });
-
+  // Layout
   bulkPanel.appendChild(columnSelect);
+  bulkPanel.appendChild(valueSearch);
   bulkPanel.appendChild(valueInput);
   bulkPanel.appendChild(valueSelect);
   bulkPanel.appendChild(actionSelect);
+  bulkPanel.appendChild(dynamicControls);
   bulkPanel.appendChild(applyBtn);
 
   panelContainer.appendChild(bulkPanel);
@@ -499,34 +523,313 @@ function renderBulkActionPanel(columns, parent) {
     panelHeader.classList.toggle("collapsed");
   });
 
-  // Change behavior when column changes
+  // --- Bulk Multi-Select modal (created once) ---
+  let bulkModal = document.getElementById("bulk-multi-modal");
+  if (!bulkModal) {
+    bulkModal = document.createElement("div");
+    bulkModal.id = "bulk-multi-modal";
+    bulkModal.className = "multi-select-modal hidden";
+    bulkModal.innerHTML = `
+      <div class="multi-select-content">
+        <h3 id="bulk-multi-title">Choose Values</h3>
+        <div class="multi-select-search">
+          <input type="text" id="bulk-multi-search" placeholder="Search options...">
+        </div>
+        <div class="multi-select-options"></div>
+        <div class="multi-select-actions">
+          <button id="bulk-multi-cancel">Cancel</button>
+          <button id="bulk-multi-save">Use Selected</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(bulkModal);
+  }
+  const bulkTitle = bulkModal.querySelector("#bulk-multi-title");
+  const bulkSearch = bulkModal.querySelector("#bulk-multi-search");
+  const bulkOptions = bulkModal.querySelector(".multi-select-options");
+  const bulkSave = bulkModal.querySelector("#bulk-multi-save");
+  const bulkCancel = bulkModal.querySelector("#bulk-multi-cancel");
+
+  // State for bulk multi-select
+  let bulkSelectedIds = [];
+  let bulkSelectedNames = [];
+  let bulkOptionsCache = [];
+
+  // Helper to restore row selections after re-render
+  const restoreSelections = (checkedRowIndices, allChecked) => {
+    const newRows = document.querySelectorAll("table.csv-table tr");
+    newRows.forEach((row, index) => {
+      if (index === 0) return;
+      const cb = row.querySelector("td input[type='checkbox'].row-selector");
+      if (cb && checkedRowIndices.has(index - 1)) {
+        cb.checked = true;
+        row.classList.add("selected");
+      }
+    });
+    const selectAll = document.querySelector('input[type="checkbox"].select-all');
+    if (selectAll && allChecked) selectAll.checked = true;
+  };
+
+  // Column change behavior
   columnSelect.addEventListener("change", async () => {
     const col = columnSelect.value;
     const field = fieldMap.find((f) => f.name === col);
+    dynamicControls.innerHTML = "";
 
-    if (field && field.fieldType === "List/Record") {
-      // Show dropdown, hide numeric + action
+    // Reset defaults UI
+    valueInput.style.display = "inline-block";
+    actionSelect.style.display = "inline-block";
+    valueSearch.style.display = "none";
+    valueSelect.style.display = "none";
+
+    // IMAGE fields
+    if (field && field.fieldType === "image") {
       valueInput.style.display = "none";
       actionSelect.style.display = "none";
+      valueSearch.style.display = "inline-block";
       valueSelect.style.display = "inline-block";
 
-      // Load options
       const options = await getListOptions(field);
-      valueSelect.innerHTML = "";
-      options.forEach((opt) => {
-        const option = document.createElement("option");
-        option.value = opt["Internal ID"];
-        option.textContent = opt["Name"];
-        valueSelect.appendChild(option);
-      });
-    } else {
-      // Show numeric + action, hide dropdown
-      valueInput.style.display = "inline-block";
-      actionSelect.style.display = "inline-block";
-      valueSelect.style.display = "none";
+
+      const renderOptions = (filter = "") => {
+        valueSelect.innerHTML = "";
+        const filtered = options.filter(o =>
+          (o["Name"] || "").toLowerCase().includes(filter.toLowerCase())
+        );
+        filtered.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt["Internal ID"] || opt.id;
+          option.textContent = opt["Name"] || opt.name;
+          valueSelect.appendChild(option);
+        });
+      };
+
+      renderOptions();
+      valueSearch.oninput = () => renderOptions(valueSearch.value);
+
+      applyBtn.onclick = () => {
+        const selectedId = valueSelect.value;
+        const selected = options.find(o => (o["Internal ID"] || o.id) === selectedId);
+        if (!selected) return;
+
+        const table = document.querySelector("table.csv-table");
+        if (!table) return;
+
+        // Keep which rows are checked
+        const checkedRowIndices = new Set();
+        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+        const allChecked = [...allRowCbs].every(cb => cb.checked);
+
+        table.querySelectorAll("tr").forEach((row, index) => {
+          if (index === 0) return;
+          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
+          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+        });
+
+        checkedRowIndices.forEach((rowIndex) => {
+          filteredData[rowIndex][col] = selected.url;
+          filteredData[rowIndex][`${col}_InternalId`] = selectedId;
+        });
+
+        displayJSONTable(filteredData).then(() => restoreSelections(checkedRowIndices, allChecked));
+      };
+
+      return;
     }
+
+    // MULTIPLE-SELECT fields
+    if (field && field.fieldType === "multiple-select") {
+      // Action dropdown → Replace / Append / Remove
+      actionSelect.innerHTML = "";
+      ["Replace", "Append", "Remove"].forEach((mode) => {
+        const opt = document.createElement("option");
+        opt.value = mode;
+        opt.textContent = mode;
+        actionSelect.appendChild(opt);
+      });
+
+      // Hide numeric/list UI
+      valueInput.style.display = "none";
+      valueSelect.style.display = "none";
+      valueSearch.style.display = "none";
+
+      // Show preview + "Choose values…" button
+      const preview = document.createElement("span");
+      preview.id = "bulk-multi-preview";
+      preview.style.marginLeft = "8px";
+      preview.style.fontStyle = "italic";
+      preview.textContent = "(no values chosen)";
+
+      const chooseBtn = document.createElement("button");
+      chooseBtn.textContent = "Choose values…";
+      chooseBtn.style.marginLeft = "8px";
+
+      dynamicControls.appendChild(chooseBtn);
+      dynamicControls.appendChild(preview);
+
+      // Load options for modal
+      bulkOptionsCache = await getListOptions(field);
+
+      const openBulkModal = () => {
+        bulkModal.classList.remove("hidden");
+        bulkTitle.textContent = `Choose values for ${col}`;
+        bulkOptions.innerHTML = "";
+        bulkSearch.value = "";
+
+        // Build options (checkbox list)
+        const renderBulkList = (filter = "") => {
+          bulkOptions.innerHTML = "";
+          const filtered = bulkOptionsCache.filter(o =>
+            (o["Name"] || o.name || "").toLowerCase().includes(filter.toLowerCase())
+          );
+
+          // Selected first
+          const selectedSet = new Set(bulkSelectedIds);
+          const ordered = [
+            ...filtered.filter(o => selectedSet.has(o["Internal ID"] || o.id)),
+            ...filtered.filter(o => !selectedSet.has(o["Internal ID"] || o.id)),
+          ];
+
+          ordered.forEach(opt => {
+            const label = document.createElement("label");
+            label.style.display = "flex";
+            label.style.alignItems = "center";
+            label.style.gap = "6px";
+
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.value = String(opt["Internal ID"] || opt.id);
+            cb.checked = selectedSet.has(cb.value);
+            cb.addEventListener("change", () => {
+              const id = cb.value;
+              const name = opt["Name"] || opt.name || "";
+              if (cb.checked) {
+                if (!bulkSelectedIds.includes(id)) {
+                  bulkSelectedIds.push(id);
+                  bulkSelectedNames.push(name);
+                }
+              } else {
+                const i = bulkSelectedIds.indexOf(id);
+                if (i > -1) {
+                  bulkSelectedIds.splice(i, 1);
+                  bulkSelectedNames.splice(i, 1);
+                }
+              }
+            });
+
+            label.appendChild(cb);
+            label.appendChild(document.createTextNode((opt["Name"] || opt.name) ?? ""));
+            bulkOptions.appendChild(label);
+          });
+        };
+
+        renderBulkList();
+        bulkSearch.oninput = () => renderBulkList(bulkSearch.value);
+
+        bulkSave.onclick = () => {
+          preview.textContent = bulkSelectedNames.length
+            ? `${bulkSelectedNames.join(", ")}`
+            : "(no values chosen)";
+          bulkModal.classList.add("hidden");
+        };
+
+        bulkCancel.onclick = () => {
+          bulkModal.classList.add("hidden");
+        };
+      };
+
+      chooseBtn.onclick = () => {
+        // start clean each time user changes column
+        bulkSelectedIds = [];
+        bulkSelectedNames = [];
+        openBulkModal();
+      };
+
+      // Apply bulk action
+      applyBtn.onclick = () => {
+        const mode = actionSelect.value; // Replace / Append / Remove
+        if (!bulkSelectedIds || bulkSelectedIds.length === 0) {
+          alert("Choose one or more values first.");
+          return;
+        }
+
+        const table = document.querySelector("table.csv-table");
+        if (!table) return;
+
+        // Track which rows are checked
+        const checkedRowIndices = new Set();
+        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+        const allChecked = [...allRowCbs].every(cb => cb.checked);
+
+        table.querySelectorAll("tr").forEach((row, index) => {
+          if (index === 0) return;
+          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
+          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+        });
+
+        checkedRowIndices.forEach((rowIndex) => {
+          let ids = Array.isArray(filteredData[rowIndex][`${col}_InternalId`])
+            ? [...filteredData[rowIndex][`${col}_InternalId`]]
+            : [];
+          let names = Array.isArray(filteredData[rowIndex][col])
+            ? [...filteredData[rowIndex][col]]
+            : [];
+
+          if (mode === "Replace") {
+            ids = [...bulkSelectedIds];
+            names = [...bulkSelectedNames];
+          } else if (mode === "Append") {
+            bulkSelectedIds.forEach((id, idx) => {
+              if (!ids.includes(id)) {
+                ids.push(id);
+                names.push(bulkSelectedNames[idx]);
+              }
+            });
+          } else if (mode === "Remove") {
+            bulkSelectedIds.forEach((id) => {
+              const i = ids.indexOf(id);
+              if (i > -1) {
+                ids.splice(i, 1);
+                names.splice(i, 1);
+              }
+            });
+          }
+
+          filteredData[rowIndex][`${col}_InternalId`] = ids;
+          filteredData[rowIndex][col] = names;
+        });
+
+        displayJSONTable(filteredData).then(() => restoreSelections(checkedRowIndices, allChecked));
+      };
+
+      return;
+    }
+
+    // Default (numeric / text / list single-select) branch
+    actionSelect.innerHTML = "";
+    ["Set To", "Add By Value", "Add By Percent"].forEach((action) => {
+      const option = document.createElement("option");
+      option.value = action;
+      option.textContent = action;
+      actionSelect.appendChild(option);
+    });
+
+    valueInput.style.display = "inline-block";
+    actionSelect.style.display = "inline-block";
+    valueSearch.style.display = "none";
+    valueSelect.style.display = "none";
+
+    applyBtn.onclick = () => {
+      applyBulkAction(col, valueInput.value, actionSelect.value);
+    };
   });
+
+  // Initialize once
+  columnSelect.dispatchEvent(new Event("change"));
 }
+
+
+
 
 // --- PUSH BUTTON ---
 function renderPushButton(parent) {
@@ -702,7 +1005,7 @@ function applyFilters() {
 }
 
 
-// --- TABLE RENDER (with fade-in + resizable columns + safe Link rendering + multiple-select + search + fuzzy match) ---
+// --- TABLE RENDER (with fade-in + resizable columns + safe Link rendering + multiple-select modal + image thumbnails with change button) ---
 async function displayJSONTable(data, opts = { showBusy: false }) {
   const container = document.getElementById("table-data");
 
@@ -818,22 +1121,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
     const tbody = document.createElement("tbody");
     const rows = opts.showAll ? data : data.slice(0, MAX_ROWS);
 
-    const renderLinkValue = (raw) => {
-      if (typeof raw !== "string") return null;
-      if (!/<a\s+[^>]*href=/i.test(raw)) return null;
-      const tpl = document.createElement("template");
-      tpl.innerHTML = raw.trim();
-      const a = tpl.content.querySelector("a");
-      if (!a) return null;
-      const link = document.createElement("a");
-      link.href = a.href;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = a.textContent || a.href;
-      return link;
-    };
-
-    // Modal (created once)
+    // Modal (created once) — reused for multiple-select
     let modal = document.getElementById("multi-select-modal");
     if (!modal) {
       modal = document.createElement("div");
@@ -881,204 +1169,760 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
         const field = fieldMap.find((f) => f.name === col);
         const rawVal = rowData[col];
 
-        if (field && field.fieldType === "List/Record") {
-          const select = document.createElement("select");
-          select.classList.add("theme-select");
-          const options = optionsByFieldName[field.name] || [];
-          for (const opt of options) {
-            const option = document.createElement("option");
-            option.value = opt["Internal ID"];
-            option.textContent = opt["Name"];
-            if (rowData[col] === opt["Name"]) option.selected = true;
-            select.appendChild(option);
-          }
-          select.addEventListener("change", () => {
-            const selected = (optionsByFieldName[field.name] || []).find(
-              (o) => o["Internal ID"] === select.value
-            );
-            rowData[col] = selected ? selected["Name"] : "";
-            rowData[`${col}_InternalId`] = select.value;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
-          });
-          td.appendChild(select);
-
-        } else if (field && field.fieldType === "multiple-select") {
-          const preview = document.createElement("span");
-          if (Array.isArray(rowData[col])) {
-            preview.textContent = rowData[col].join(", ");
-          } else if (typeof rowData[col] === "string") {
-            preview.textContent = rowData[col];
-          } else {
-            preview.textContent = "";
-          }
-          preview.className = "multi-select-preview";
-
-          const editBtn = document.createElement("button");
-          editBtn.textContent = "Edit";
-          editBtn.className = "multi-select-edit";
-
-          editBtn.addEventListener("click", () => {
-            modal.classList.remove("hidden");
-
-            modalOptions.innerHTML = "";
-            modalSearch.value = "";
-
-            const options = optionsByFieldName[field.name] || [];
-
-            // Which IDs are selected
-            let selectedIds = [];
-            if (Array.isArray(rowData[`${col}_InternalId`])) {
-              selectedIds = rowData[`${col}_InternalId`];
-            } else {
-              const namesArray = Array.isArray(rowData[col])
-                ? rowData[col]
-                : (typeof rowData[col] === "string"
-                    ? rowData[col].split(",").map(s => s.trim()).filter(Boolean)
-                    : []);
-              selectedIds = namesArray
-                .map(name => {
-                  const lowerName = name.toLowerCase();
-                  let match = options.find(o =>
-                    (o["Name"] || o.name) === name
-                  );
-                  if (!match) {
-                    match = options.find(o =>
-                      (o["Name"] || o.name || "").toLowerCase() === lowerName
-                    );
-                  }
-                  if (!match) {
-                    match = options.find(o =>
-                      (o["Name"] || o.name || "").toLowerCase().includes(lowerName)
-                    );
-                  }
-                  return match ? (match["Internal ID"] || match.id) : null;
-                })
-                .filter(Boolean);
+        // --- IMAGE FIELD ---
+        if (field && field.fieldType === "image") {
+          const renderThumbnail = (url, internalId) => {
+            td.innerHTML = "";
+            if (internalId) {
+              td.dataset.internalid = internalId;
             }
 
-            const sortedOptions = [
-              ...options.filter(o => selectedIds.includes(o["Internal ID"] || o.id)),
-              ...options.filter(o => !selectedIds.includes(o["Internal ID"] || o.id))
-            ];
+            const wrapper = document.createElement("div");
+            wrapper.style.display = "flex";
+            wrapper.style.flexDirection = "column";
+            wrapper.style.alignItems = "center";
+            wrapper.style.gap = "2px";
 
-            sortedOptions.forEach((opt) => {
-              const label = document.createElement("label");
-              label.style.display = "flex";
-              label.style.alignItems = "center";
-              const cb = document.createElement("input");
-              cb.type = "checkbox";
-              cb.value = opt["Internal ID"] || opt.id;
-              if (selectedIds.includes(cb.value)) cb.checked = true;
-              label.appendChild(cb);
-              label.appendChild(document.createTextNode(" " + (opt["Name"] || opt.name)));
-              modalOptions.appendChild(label);
+            if (url) {
+              const img = document.createElement("img");
+              img.src = url;
+              img.alt = col;
+              img.loading = "lazy";
+              img.style.maxWidth = "60px";
+              img.style.maxHeight = "60px";
+              img.style.objectFit = "cover";
+              img.style.borderRadius = "4px";
+              img.style.cursor = "pointer";
+              img.addEventListener("click", () => window.open(url, "_blank"));
+              wrapper.appendChild(img);
+            } else {
+              const placeholder = document.createElement("div");
+              placeholder.textContent = "(no image)";
+              placeholder.style.fontSize = "0.75rem";
+              placeholder.style.color = "#888";
+              wrapper.appendChild(placeholder);
+            }
+
+            const changeBtn = document.createElement("button");
+            changeBtn.textContent = url ? "Change" : "Set Image";
+            changeBtn.style.fontSize = "0.75rem";
+            changeBtn.style.padding = "2px 6px";
+            changeBtn.style.cursor = "pointer";
+
+            changeBtn.addEventListener("click", async () => {
+              td.innerHTML = "Loading…";
+              const options = field.jsonFeed ? await getListOptions(field) : [];
+
+              const chooser = document.createElement("div");
+              chooser.style.display = "flex";
+              chooser.style.flexDirection = "column";
+              chooser.style.gap = "4px";
+
+              const search = document.createElement("input");
+              search.type = "text";
+              search.placeholder = "Search images…";
+              search.style.padding = "2px 4px";
+
+              const select = document.createElement("select");
+              select.size = 6;
+              select.style.maxHeight = "120px";
+              select.style.overflowY = "auto";
+
+              const cancelBtn = document.createElement("button");
+              cancelBtn.textContent = "Cancel";
+              cancelBtn.style.marginTop = "4px";
+              cancelBtn.addEventListener("click", () => {
+                renderThumbnail(rowData[col], rowData[`${col}_InternalId`]);
+              });
+
+              const renderOptions = (filter = "") => {
+                select.innerHTML = "";
+                const filtered = options.filter(o =>
+                  (o["Name"] || "").toLowerCase().includes(filter.toLowerCase())
+                );
+                filtered.forEach(opt => {
+                  const option = document.createElement("option");
+                  option.value = opt["Internal ID"];
+                  option.textContent = opt["Name"];
+                  if (rowData[`${col}_InternalId`] === opt["Internal ID"]) {
+                    option.selected = true;
+                  }
+                  select.appendChild(option);
+                });
+              };
+
+              renderOptions();
+
+              search.addEventListener("input", () => renderOptions(search.value));
+
+              select.addEventListener("change", () => {
+                const selectedId = select.value;
+                const selected = options.find(o => o["Internal ID"] === selectedId);
+                if (selected) {
+                  rowData[col] = selected.url;
+                  rowData[`${col}_InternalId`] = selectedId;
+                  td.dataset.internalid = selectedId;
+                  rowCheckbox.checked = true;
+                  highlightRow(rowCheckbox);
+                  renderThumbnail(selected.url, selectedId);
+                }
+              });
+
+              chooser.appendChild(search);
+              chooser.appendChild(select);
+              chooser.appendChild(cancelBtn);
+              td.innerHTML = "";
+              td.appendChild(chooser);
+              search.focus();
             });
 
-            modalTitle.textContent = `Edit ${col} (${selectedIds.length} selected)`;
+            wrapper.appendChild(changeBtn);
+            td.appendChild(wrapper);
+          };
 
-            modalSearch.oninput = () => {
-              const term = modalSearch.value.toLowerCase();
-              modalOptions.querySelectorAll("label").forEach(label => {
-                const text = label.textContent.toLowerCase();
-                label.style.display = text.includes(term) ? "flex" : "none";
-              });
-            };
+          renderThumbnail(rawVal, rowData[`${col}_InternalId`]);
+        }
 
-            // ✅ Save handler
-            modalSave.onclick = () => {
-              const checked = [...modalOptions.querySelectorAll("input:checked")];
-              const ids = checked.map(c => c.value);
-              const names = checked.map(c => {
-                const opt = options.find(o =>
-                  (o["Internal ID"] || o.id) === c.value
-                );
-                return opt ? (opt["Name"] || opt.name) : "";
-              });
-
-              rowData[col] = names;
-              rowData[`${col}_InternalId`] = ids;
-
-              // 🔑 Store IDs on preview for pushUpdates
-              preview.dataset.ids = ids.join(",");
-
-              preview.textContent = names.join(", ");
+        // --- LIST/RECORD FIELD ---
+        else if (field && field.fieldType === "List/Record") {
+          if (field.disableField) {
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const select = document.createElement("select");
+            select.classList.add("theme-select");
+            const options = optionsByFieldName[field.name] || [];
+            for (const opt of options) {
+              const option = document.createElement("option");
+              option.value = opt["Internal ID"];
+              option.textContent = opt["Name"];
+              if (rowData[col] === opt["Name"]) option.selected = true;
+              select.appendChild(option);
+            }
+            select.addEventListener("change", () => {
+              const selected = (optionsByFieldName[field.name] || []).find(
+                (o) => o["Internal ID"] === select.value
+              );
+              rowData[col] = selected ? selected["Name"] : "";
+              rowData[`${col}_InternalId`] = select.value;
               rowCheckbox.checked = true;
               highlightRow(rowCheckbox);
+            });
+            td.appendChild(select);
+          }
+        }
+        // --- RICH TEXT FIELD ---
+        else if (field && field.fieldType === "rich-text") {
+          const wrapper = document.createElement("div");
+          wrapper.style.display = "flex";
+          wrapper.style.flexDirection = "column";
+          wrapper.style.gap = "4px";
 
-              modal.classList.add("hidden");
-            };
+          // helper: decode escaped HTML (multi-pass)
+          const decodeHtmlEntities = (str) => {
+            if (!str) return "";
+            const txt = document.createElement("textarea");
+            let prev = str;
+            let decoded = str;
+            do {
+              prev = decoded;
+              txt.innerHTML = prev;
+              decoded = txt.value;
+            } while (decoded !== prev);
+            return decoded;
+          };
 
-            modalCancel.onclick = () => {
-              modal.classList.add("hidden");
-            };
-          });
+          const preview = document.createElement("div");
+          preview.className = "rich-preview";
+          preview.style.border = "1px solid #ccc";
+          preview.style.padding = "4px";
+          preview.style.minHeight = "40px";
+          preview.style.background = "#fafafa";
+          preview.style.maxHeight = "140px";
+          preview.style.overflow = "auto";
 
-          td.appendChild(preview);
-          td.appendChild(editBtn);
-
-        } else if (field && field.fieldType === "Checkbox") {
-          const cb = document.createElement("input");
-          cb.type = "checkbox";
-          cb.checked =
-            String(rawVal).toLowerCase() === "true" ||
-            rawVal === "1" ||
-            rawVal === true;
-          cb.addEventListener("change", () => {
-            rowData[col] = cb.checked;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
-          });
-          td.style.textAlign = "center";
-          td.appendChild(cb);
-
-        } else if (["Purchase Price", "Base Price", "Retail Price"].includes(col)) {
-          const input = document.createElement("input");
-          input.type = "number";
-          input.step = col === "Retail Price" ? "1" : "0.01";
-          input.value = rawVal || "";
-          input.addEventListener("input", () => {
-            rowData[col] = input.value;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
-          });
-          td.appendChild(input);
-
-        } else if (col === "Internal ID") {
-          td.textContent = rawVal || "";
-          td.style.color = "#666";
-          td.style.backgroundColor = "#f5f5f5";
-          td.style.cursor = "not-allowed";
-
-        } else if ((field && field.fieldType === "Link") || (typeof rawVal === "string" && /<a\s+[^>]*href=/i.test(rawVal))) {
-          const linkEl = renderLinkValue(rawVal);
-          if (linkEl) td.appendChild(linkEl);
-          else td.textContent = rawVal || "";
-          td.style.backgroundColor = "#f5f5f5";
-          td.style.cursor = "default";
-
-        } else if (field && field.fieldType === "Free-Form Text") {
           const textarea = document.createElement("textarea");
-          textarea.value = rawVal || "";
-          textarea.rows = 2;
-          textarea.style.resize = "none";
+          textarea.className = "rich-raw"; // ✅ pushUpdates reads this
+          textarea.rows = 4;
+          textarea.style.display = "none";
+          textarea.style.resize = "vertical";
+          textarea.spellcheck = false;
+
+          // Seed values
+          const initialRaw = (typeof rawVal === "string" ? rawVal : "") || "";
+          const initialDecoded = decodeHtmlEntities(initialRaw);
+          rowData[col] = initialRaw;
+          textarea.value = initialRaw;
+          preview.innerHTML = initialDecoded || "<em>(empty)</em>";
+
+          const toggleBtn = document.createElement("button");
+          toggleBtn.textContent = "Show HTML";
+          toggleBtn.style.fontSize = "0.75rem";
+
+          const expandBtn = document.createElement("button");
+          expandBtn.textContent = "Expand";
+          expandBtn.style.fontSize = "0.75rem";
+          expandBtn.style.marginLeft = "4px";
+
+          let showingHtml = false;
+
+          const showPreview = () => {
+            const v = textarea.value;
+            const decoded = decodeHtmlEntities(v);
+            preview.innerHTML = decoded || "<em>(empty)</em>";
+            rowData[col] = v;
+            textarea.style.display = "none";
+            preview.style.display = "block";
+            toggleBtn.textContent = "Show HTML";
+            showingHtml = false;
+          };
+
+          const showHtml = () => {
+            textarea.value = rowData[col] || "";
+            textarea.style.display = "block";
+            preview.style.display = "none";
+            toggleBtn.textContent = "Show Preview";
+            showingHtml = true;
+          };
+
+          toggleBtn.addEventListener("click", () => {
+            if (showingHtml) {
+              showPreview();
+            } else {
+              showHtml();
+            }
+          });
+
           textarea.addEventListener("input", () => {
             rowData[col] = textarea.value;
             rowCheckbox.checked = true;
             highlightRow(rowCheckbox);
           });
-          td.appendChild(textarea);
 
-        } else {
-          const input = document.createElement("input");
-          input.type = "text";
-          input.value = rawVal || "";
-          input.addEventListener("input", () => {
-            rowData[col] = input.value;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
+          // --- Modal for expanded editing (with side panel + proper caret restore) ---
+          expandBtn.addEventListener("click", () => {
+            let overlay = document.getElementById("rich-text-overlay");
+            let modal = document.getElementById("rich-text-modal");
+
+            if (!overlay) {
+              overlay = document.createElement("div");
+              overlay.id = "rich-text-overlay";
+              overlay.style.position = "fixed";
+              overlay.style.top = 0;
+              overlay.style.left = 0;
+              overlay.style.width = "100%";
+              overlay.style.height = "100%";
+              overlay.style.background = "rgba(0,0,0,0.5)";
+              overlay.style.display = "none";
+              overlay.style.zIndex = "9998";
+              document.body.appendChild(overlay);
+            }
+
+            if (!modal) {
+              modal = document.createElement("div");
+              modal.id = "rich-text-modal";
+              modal.style.position = "fixed";
+              modal.style.top = "50%";
+              modal.style.left = "50%";
+              modal.style.transform = "translate(-50%, -50%)";
+              modal.style.background = "#fff";
+              modal.style.borderRadius = "6px";
+              modal.style.boxShadow = "0 4px 12px rgba(0,0,0,0.3)";
+              modal.style.zIndex = "9999";
+              modal.style.width = "92%";
+              modal.style.maxWidth = "1200px";
+              modal.style.height = "86%";
+              modal.style.display = "flex";
+              modal.style.flexDirection = "column";
+
+              modal.innerHTML = `
+        <div style="padding:10px;border-bottom:1px solid #ddd;display:flex;justify-content:space-between;align-items:center;">
+          <h3 style="margin:0;font-size:1rem;">Edit Rich Text</h3>
+          <button id="rich-modal-close" style="font-size:1.2rem;line-height:1;background:none;border:none;cursor:pointer;">×</button>
+        </div>
+
+        <!-- Toolbar -->
+        <div id="rich-modal-toolbar" style="padding:6px;border-bottom:1px solid #ddd;display:flex;gap:6px;flex-wrap:wrap;background:#f9f9f9;">
+          <button data-cmd="formatBlock" data-value="h1">H1</button>
+          <button data-cmd="formatBlock" data-value="h2">H2</button>
+          <button data-cmd="formatBlock" data-value="p">P</button>
+          <button data-cmd="insertUnorderedList">• List</button>
+          <button data-cmd="insertOrderedList">1. List</button>
+          <button data-cmd="bold"><b>B</b></button>
+          <button data-cmd="italic"><i>I</i></button>
+          <button data-cmd="underline"><u>U</u></button>
+        </div>
+
+        <!-- Content -->
+        <div id="rich-modal-content" style="flex:1; display:flex; overflow:hidden;">
+          <!-- Editor -->
+          <div id="rich-modal-editor" style="flex:3; display:flex; flex-direction:column; min-width:0;">
+            <div id="rich-modal-preview" class="rich-preview"
+                 style="flex:1;overflow:auto;padding:10px; outline:none;"
+                 contenteditable="true"></div>
+            <textarea id="rich-modal-textarea"
+                      style="flex:1;display:none;margin:10px;font-family:monospace;"></textarea>
+          </div>
+          <!-- Side Panel -->
+          <div id="rich-modal-fields"
+               style="flex:1; border-left:1px solid #ddd; overflow:auto; padding:8px; background:#fafafa;">
+            <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+              <h4 style="margin:0; flex:1;">Insert Fields</h4>
+              <input id="rich-fields-filter" type="text" placeholder="Filter…" style="padding:4px 6px; width:45%;">
+            </div>
+            <div id="rich-fields-list"></div>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding:10px;border-top:1px solid #ddd;display:flex;justify-content:space-between;">
+          <button id="rich-modal-toggle">Show HTML</button>
+          <div>
+            <button id="rich-modal-cancel">Cancel</button>
+            <button id="rich-modal-save">Save</button>
+          </div>
+        </div>
+      `;
+              document.body.appendChild(modal);
+
+              // toolbar event delegation
+              modal.querySelector("#rich-modal-toolbar").addEventListener("click", (e) => {
+                if (e.target.tagName === "BUTTON") {
+                  const cmd = e.target.dataset.cmd;
+                  const val = e.target.dataset.value || null;
+                  document.execCommand(cmd, false, val);
+                }
+              });
+
+              // close button
+              modal.querySelector("#rich-modal-close").onclick = () => {
+                overlay.style.display = "none";
+                modal.style.display = "none";
+              };
+            }
+
+            const modalPreview = modal.querySelector("#rich-modal-preview");
+            const modalTextarea = modal.querySelector("#rich-modal-textarea");
+            const modalToggle = modal.querySelector("#rich-modal-toggle");
+            const modalCancel = modal.querySelector("#rich-modal-cancel");
+            const modalSave = modal.querySelector("#rich-modal-save");
+            const fieldsPanel = modal.querySelector("#rich-modal-fields");
+            const fieldsFilter = modal.querySelector("#rich-fields-filter");
+            const fieldsList = modal.querySelector("#rich-fields-list");
+
+            let modalShowingHtml = false;
+
+            // ---- caret/selection tracking ----
+            let savedRange = null; // for contenteditable
+            const savedTextSel = { start: null, end: null }; // for textarea
+
+            const savePreviewSelection = () => {
+              const sel = window.getSelection();
+              if (sel && sel.rangeCount > 0) {
+                savedRange = sel.getRangeAt(0).cloneRange();
+              }
+            };
+            const saveTextareaSelection = () => {
+              savedTextSel.start = modalTextarea.selectionStart;
+              savedTextSel.end = modalTextarea.selectionEnd;
+            };
+
+            const placeCaretAtEnd = (el) => {
+              if (!el) return;
+              if (el.isContentEditable) {
+                const range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                savedRange = range.cloneRange();
+              } else if (el === modalTextarea) {
+                el.focus();
+                el.selectionStart = el.selectionEnd = el.value.length;
+                saveTextareaSelection();
+              }
+            };
+
+            const insertAtCaret = (text) => {
+              if (modalShowingHtml) {
+                // HTML textarea mode
+                modalTextarea.focus();
+                // try saved positions first
+                let start = typeof savedTextSel.start === "number" ? savedTextSel.start : modalTextarea.selectionStart;
+                let end = typeof savedTextSel.end === "number" ? savedTextSel.end : modalTextarea.selectionEnd;
+                if (typeof start !== "number" || typeof end !== "number") {
+                  start = end = modalTextarea.value.length;
+                }
+                modalTextarea.value = modalTextarea.value.slice(0, start) + text + modalTextarea.value.slice(end);
+                const newPos = start + text.length;
+                modalTextarea.selectionStart = modalTextarea.selectionEnd = newPos;
+                saveTextareaSelection();
+              } else {
+                // WYSIWYG (contenteditable)
+                modalPreview.focus();
+                let range = savedRange ? savedRange.cloneRange() : null;
+
+                // if no saved range, try current selection; else append at end
+                if (!range) {
+                  const sel = window.getSelection();
+                  if (sel && sel.rangeCount > 0) {
+                    range = sel.getRangeAt(0).cloneRange();
+                  } else {
+                    placeCaretAtEnd(modalPreview);
+                    range = savedRange ? savedRange.cloneRange() : null;
+                  }
+                }
+                if (!range) return; // safety
+
+                range.deleteContents();
+                const node = document.createTextNode(text);
+                range.insertNode(node);
+
+                // move caret after inserted node
+                const after = document.createRange();
+                after.setStartAfter(node);
+                after.setEndAfter(node);
+                const sel2 = window.getSelection();
+                sel2.removeAllRanges();
+                sel2.addRange(after);
+                savedRange = after.cloneRange(); // persist last caret
+              }
+            };
+
+            // wire listeners to keep last caret/selection
+            ["keyup", "mouseup", "input", "focus"].forEach(evt =>
+              modalPreview.addEventListener(evt, savePreviewSelection)
+            );
+            ["keyup", "mouseup", "input", "select", "focus"].forEach(evt =>
+              modalTextarea.addEventListener(evt, saveTextareaSelection)
+            );
+
+            // ---- mode switching ----
+            const modalShowPreview = () => {
+              modalPreview.innerHTML = modalTextarea.value || "<em>(empty)</em>";
+              modalTextarea.style.display = "none";
+              modalPreview.style.display = "block";
+              modalToggle.textContent = "Show HTML";
+              modalShowingHtml = false;
+              placeCaretAtEnd(modalPreview);
+            };
+
+            const modalShowHtml = () => {
+              modalTextarea.value = modalPreview.innerHTML;
+              modalTextarea.style.display = "block";
+              modalPreview.style.display = "none";
+              modalToggle.textContent = "Show Preview";
+              modalShowingHtml = true;
+              placeCaretAtEnd(modalTextarea);
+            };
+
+            // seed modal with current value
+            modalTextarea.value = rowData[col] || "";
+            modalShowPreview();
+
+            modalToggle.onclick = () => {
+              if (modalShowingHtml) modalShowPreview();
+              else modalShowHtml();
+            };
+
+            modalCancel.onclick = () => {
+              overlay.style.display = "none";
+              modal.style.display = "none";
+            };
+
+            modalSave.onclick = () => {
+              const newVal = modalShowingHtml ? modalTextarea.value : modalPreview.innerHTML;
+              rowData[col] = newVal;
+              // keep hidden textarea.rich-raw in sync
+              textarea.value = newVal;
+              showPreview(); // refresh cell preview
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+              overlay.style.display = "none";
+              modal.style.display = "none";
+            };
+
+            // --- Populate Fields Panel (ALL fields from the row, static insertion) ---
+            const toDisplay = (v) => {
+              if (v == null) return "";
+              if (Array.isArray(v)) return v.join(", ");
+              if (typeof v === "object") {
+                try { return JSON.stringify(v); } catch { return String(v); }
+              }
+              if (typeof v === "boolean") return v ? "true" : "false";
+              return String(v);
+            };
+
+            const renderFieldsList = (filterText = "") => {
+              fieldsList.innerHTML = "";
+              const entries = Object.entries(rowData)
+                .filter(([k]) => k !== col) // exclude the rich-text field itself
+                .sort((a, b) => a[0].localeCompare(b[0]));
+
+              const lcFilter = filterText.trim().toLowerCase();
+
+              entries.forEach(([key, value]) => {
+                const displayVal = toDisplay(value);
+                const line = `${key}: ${displayVal}`;
+                if (lcFilter && !line.toLowerCase().includes(lcFilter)) return;
+
+                const item = document.createElement("div");
+                item.style.cursor = "pointer";
+                item.style.padding = "6px 8px";
+                item.style.borderBottom = "1px solid #eee";
+                item.style.fontSize = "0.85rem";
+                item.style.userSelect = "none";
+                item.title = line; // tooltip with full value
+                // Render label + value with wrapping
+                item.innerHTML = `<strong style="display:block; margin-bottom:2px;">${key}</strong><div style="white-space:normal; word-break:break-word;">${displayVal}</div>`;
+
+                item.addEventListener("mousedown", (e) => {
+                  // prevent focus loss flicker
+                  e.preventDefault();
+                });
+                item.addEventListener("click", () => {
+                  insertAtCaret(displayVal);
+                });
+
+                fieldsList.appendChild(item);
+              });
+
+              if (!fieldsList.children.length) {
+                const empty = document.createElement("div");
+                empty.textContent = "No fields match your filter.";
+                empty.style.color = "#777";
+                empty.style.padding = "8px";
+                fieldsList.appendChild(empty);
+              }
+            };
+
+            renderFieldsList();
+            fieldsFilter.addEventListener("input", () => renderFieldsList(fieldsFilter.value));
+
+            overlay.style.display = "block";
+            modal.style.display = "flex";
           });
-          td.appendChild(input);
+
+          const btnRow = document.createElement("div");
+          btnRow.style.display = "flex";
+          btnRow.style.gap = "4px";
+          btnRow.appendChild(toggleBtn);
+          btnRow.appendChild(expandBtn);
+
+          wrapper.appendChild(preview);
+          wrapper.appendChild(textarea);
+          wrapper.appendChild(btnRow);
+          td.appendChild(wrapper);
+
+          showPreview(); // start in preview mode
+        }
+
+
+        // --- MULTIPLE-SELECT FIELD ---
+        else if (field && field.fieldType === "multiple-select") {
+          if (field.disableField) {
+            td.textContent = Array.isArray(rawVal) ? rawVal.join(", ") : (rawVal || "");
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const preview = document.createElement("span");
+            preview.textContent = Array.isArray(rawVal) ? rawVal.join(", ") : (rawVal || "");
+            preview.className = "multi-select-preview";
+
+            const editBtn = document.createElement("button");
+            editBtn.textContent = "Edit";
+            editBtn.className = "multi-select-edit";
+
+            editBtn.addEventListener("click", () => {
+              modal.classList.remove("hidden");
+              modalOptions.innerHTML = "";
+              modalSearch.value = "";
+
+              const options = optionsByFieldName[field.name] || [];
+
+              let selectedIds = [];
+              if (Array.isArray(rowData[`${col}_InternalId`])) {
+                selectedIds = rowData[`${col}_InternalId`];
+              } else {
+                const namesArray = Array.isArray(rowData[col])
+                  ? rowData[col]
+                  : (typeof rowData[col] === "string"
+                    ? rowData[col].split(",").map(s => s.trim()).filter(Boolean)
+                    : []);
+                selectedIds = namesArray
+                  .map(name => {
+                    const lowerName = name.toLowerCase();
+                    let match = options.find(o => (o["Name"] || o.name) === name);
+                    if (!match) match = options.find(o => (o["Name"] || o.name || "").toLowerCase() === lowerName);
+                    if (!match) match = options.find(o => (o["Name"] || o.name || "").toLowerCase().includes(lowerName));
+                    return match ? (match["Internal ID"] || match.id) : null;
+                  })
+                  .filter(Boolean);
+              }
+
+              const sortedOptions = [
+                ...options.filter(o => selectedIds.includes(o["Internal ID"] || o.id)),
+                ...options.filter(o => !selectedIds.includes(o["Internal ID"] || o.id))
+              ];
+
+              sortedOptions.forEach((opt) => {
+                const label = document.createElement("label");
+                label.style.display = "flex";
+                label.style.alignItems = "center";
+                const cb = document.createElement("input");
+                cb.type = "checkbox";
+                cb.value = opt["Internal ID"] || opt.id;
+                if (selectedIds.includes(cb.value)) cb.checked = true;
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(" " + (opt["Name"] || opt.name)));
+                modalOptions.appendChild(label);
+              });
+
+              modalTitle.textContent = `Edit ${col} (${selectedIds.length} selected)`;
+
+              modalSearch.oninput = () => {
+                const term = modalSearch.value.toLowerCase();
+                modalOptions.querySelectorAll("label").forEach(label => {
+                  const text = label.textContent.toLowerCase();
+                  label.style.display = text.includes(term) ? "flex" : "none";
+                });
+              };
+
+              modalSave.onclick = () => {
+                const checked = [...modalOptions.querySelectorAll("input:checked")];
+                const ids = checked.map(c => c.value);
+                const names = checked.map(c => {
+                  const opt = options.find(o => (o["Internal ID"] || o.id) === c.value);
+                  return opt ? (opt["Name"] || opt.name) : "";
+                });
+
+                rowData[col] = names;
+                rowData[`${col}_InternalId`] = ids;
+                preview.dataset.ids = ids.join(",");
+                preview.textContent = names.join(", ");
+
+                rowCheckbox.checked = true;
+                highlightRow(rowCheckbox);
+                modal.classList.add("hidden");
+              };
+
+              modalCancel.onclick = () => modal.classList.add("hidden");
+            });
+
+            td.appendChild(preview);
+            td.appendChild(editBtn);
+          }
+        }
+
+        // --- CHECKBOX FIELD ---
+        else if (field && field.fieldType === "Checkbox") {
+          if (field.disableField) {
+            td.textContent =
+              String(rawVal).toLowerCase() === "true" || rawVal === "1" || rawVal === true
+                ? "✔"
+                : "";
+            td.style.textAlign = "center";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked =
+              String(rawVal).toLowerCase() === "true" ||
+              rawVal === "1" ||
+              rawVal === true;
+            cb.addEventListener("change", () => {
+              rowData[col] = cb.checked;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.style.textAlign = "center";
+            td.appendChild(cb);
+          }
+        }
+
+        // --- PRICE FIELDS ---
+        else if (["Purchase Price", "Base Price", "Retail Price"].includes(col)) {
+          if (field && field.disableField) {
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const input = document.createElement("input");
+            input.type = "number";
+            input.step = col === "Retail Price" ? "1" : "0.01";
+            input.value = rawVal || "";
+            input.addEventListener("input", () => {
+              rowData[col] = input.value;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.appendChild(input);
+          }
+        }
+
+        // --- INTERNAL ID ---
+        else if (col === "Internal ID") {
+          td.textContent = rawVal || "";
+          td.style.color = "#666";
+          td.style.backgroundColor = "#f5f5f5";
+          td.style.cursor = "not-allowed";
+        }
+
+        // --- LINK FIELDS ---
+        else if ((field && field.fieldType === "Link") || (typeof rawVal === "string" && /<a\s+[^>]*href=/i.test(rawVal))) {
+          const linkEl = renderLinkValue(rawVal);
+          if (linkEl) td.appendChild(linkEl);
+          else td.textContent = rawVal || "";
+          td.style.backgroundColor = "#f5f5f5";
+          td.style.cursor = "default";
+        }
+
+        // --- FREE TEXT ---
+        else if (field && field.fieldType === "Free-Form Text") {
+          if (field.disableField) {
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const textarea = document.createElement("textarea");
+            textarea.value = rawVal || "";
+            textarea.rows = 2;
+            textarea.style.resize = "none";
+            textarea.addEventListener("input", () => {
+              rowData[col] = textarea.value;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.appendChild(textarea);
+          }
+        }
+
+        // --- DEFAULT TEXT INPUT ---
+        else {
+          if (field && field.disableField) {
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = rawVal || "";
+            input.addEventListener("input", () => {
+              rowData[col] = input.value;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.appendChild(input);
+          }
         }
 
         row.appendChild(td);
@@ -1102,13 +1946,6 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
     }
   }
 }
-
-
-
-
-
-
-
 
 
 
@@ -1166,14 +2003,15 @@ async function pushUpdates() {
   const table = document.querySelector("table.csv-table");
   if (!table) return alert("No table found!");
 
-  const rows = Array.from(table.querySelectorAll("tr")).slice(1);
+  const rows = Array.from(table.querySelectorAll("tr")).slice(1); // skip header
   const rowsToPush = [];
 
-  rows.forEach((row, idx) => {
+  rows.forEach((row) => {
     const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
     if (!checkbox || !checkbox.checked) return;
 
     const rowData = {};
+
     displayedColumns.forEach((col, colIdx) => {
       const td = row.children[colIdx + 1];
       if (!td) return;
@@ -1185,28 +2023,56 @@ async function pushUpdates() {
         const select = td.querySelector("select");
         if (select) {
           const selectedId = select.value;
-          rowData[`${col}_InternalId`] = selectedId;
+          const selectedText = select.options[select.selectedIndex]?.text || "";
+          rowData[col] = selectedText; // keep Name for UI/debug
+          rowData[`${col}_InternalId`] = selectedId; // required by backend
         }
 
       } else if (field && field.fieldType === "multiple-select") {
         // --- Multi select ---
-        // Read from data attribute (set by modal save)
         const preview = td.querySelector(".multi-select-preview");
-        const ids = preview ? preview.dataset.ids : "";
-        rowData[`${col}_InternalId`] = ids ? ids.split(",") : [];
+        const ids = preview?.dataset.ids ? preview.dataset.ids.split(",") : [];
+        const names = preview?.textContent
+          ? preview.textContent.split(",").map((s) => s.trim())
+          : [];
+
+        rowData[col] = names;             // names for display
+        rowData[`${col}_InternalId`] = ids.map(String); // ✅ ensure IDs are strings
+
+      } else if (field && field.fieldType === "image") {
+        // --- Image field (Suitelet handles this) ---
+        const storedId = td.dataset.internalid || "";
+        const fileName = td.dataset.filename || "";
+        const img = td.querySelector("img");
+        const url = img ? img.src : "";
+
+        // ✅ Only the InternalId matters for backend → Suitelet will use it
+        rowData[`${col}_InternalId`] = storedId ? String(storedId) : "";
+
+        // Optional: keep for UI/debug
+        rowData[col] = fileName;
+        rowData[`${col}_Url`] = url;
 
       } else if (field && field.fieldType === "Checkbox") {
-        // --- Boolean ---
         const cb = td.querySelector("input[type='checkbox']");
         rowData[col] = cb ? cb.checked : false;
 
       } else if (field && field.fieldType === "Free-Form Text") {
-        // --- Textarea ---
         const textarea = td.querySelector("textarea");
         rowData[col] = textarea ? textarea.value : td.textContent.trim();
 
+      } else if (field && field.fieldType === "rich-text") {
+        // --- Rich text: always grab the raw HTML value ---
+        const textarea = td.querySelector("textarea.rich-raw");
+        if (textarea) {
+          rowData[col] = textarea.value;  // send HTML, not preview text
+        } else {
+          // fallback to cell preview if somehow no textarea
+          rowData[col] = td.querySelector(".rich-preview")?.innerHTML || "";
+        }
+
       } else {
-        // --- Inputs (text/number) or fallback to td text ---
+        // Fallback: text/number inputs or static text
         const input = td.querySelector("input");
         if (input) {
           rowData[col] = input.value;
@@ -1220,6 +2086,8 @@ async function pushUpdates() {
   });
 
   if (rowsToPush.length === 0) return alert("No rows selected to push.");
+
+  console.log("🚀 Payload rows (pre-send):", rowsToPush); // debug
 
   const progressContainer = document.getElementById("push-progress-container");
   if (progressContainer) {
@@ -1311,6 +2179,7 @@ async function pushUpdates() {
     window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
   }
 }
+
 
 
 

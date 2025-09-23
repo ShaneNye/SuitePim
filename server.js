@@ -590,6 +590,13 @@ function createJobId() {
   return Math.random().toString(36).substring(2, 10);
 }
 
+function getImageEndpoint(environment) {
+  if (environment.toLowerCase() === "production") {
+    return process.env.NETSUITE_PROD_IMAGE_ENDPOINT;
+  }
+  return process.env.NETSUITE_SANDBOX_IMAGE_ENDPOINT;
+}
+
 async function runNextJob() {
   if (jobQueue.length === 0) return;
 
@@ -610,27 +617,108 @@ async function runNextJob() {
   for (const row of rows) {
     if (!jobs[jobId]) return; // cancelled mid-run
 
-    // --- Validation job branch ---
-    if (type === "validation") {
-      const rowResult = {
-        internalid: row.internalid,
-        status: "Pending",
-        response: null,
-      };
+    const rowResult = {
+      itemId: row["Item ID"],
+      status: "Pending",
+      response: { main: null, prices: [], images: [], error: null },
+    };
 
-      try {
-        if (!row.internalid) {
-          rowResult.status = "Skipped";
-          rowResult.response = { reason: "Missing Internal ID" };
-          results.push(rowResult);
+    try {
+      if (!row["Internal ID"]) {
+        rowResult.status = "Skipped";
+        rowResult.response = { reason: "Missing Internal ID" };
+        results.push(rowResult);
+        continue;
+      }
+
+      // --- Build main payload (non-image fields only) ---
+      const payload = {};
+      let basePriceVal;
+
+      for (const field of fieldMap) {
+        if (field.name === "Base Price") {
+          const val = parseFloat(row[field.name]);
+          if (!isNaN(val)) basePriceVal = val;
           continue;
         }
 
-        const payload = row.fields || {};
-        const url = `${envConfig.restUrl}/inventoryItem/${row.internalid}`;
+        if (field.fieldType === "multiple-select") {
+          const ids = row[`${field.name}_InternalId`];
+          if (Array.isArray(ids)) {
+            payload[field.internalid] = { items: ids.map((id) => ({ id: String(id) })) };
+          }
+          continue;
+        }
+
+        if (field.fieldType === "List/Record") {
+          const internalId = row[`${field.name}_InternalId`] ?? null;
+          if (internalId !== null && internalId !== "") {
+            payload[field.internalid] = { id: String(internalId) };
+          }
+          continue;
+        }
+
+        if (field.fieldType === "image") {
+          const fileId = row[`${field.name}_InternalId`];
+          if (fileId && String(fileId).trim() !== "") {
+            const suiteletUrl = getImageEndpoint(environment);
+            const url = `${suiteletUrl}&itemid=${row["Internal ID"]}&fileid=${fileId}&fieldid=${field.internalid}`;
+
+            console.log(`🖼️ Calling Suitelet for image field ${field.internalid}`);
+            console.log("➡️ Suitelet URL:", url);
+
+            try {
+              const res = await fetch(url, { method: "GET" });
+              const text = await res.text();
+              let data;
+              try {
+                data = JSON.parse(text);
+              } catch {
+                data = text;
+              }
+              console.log("⬅️ Suitelet response:", data);
+
+              rowResult.response.images.push({
+                field: field.internalid,
+                result: data,
+              });
+            } catch (err) {
+              console.error("❌ Suitelet call failed:", err);
+              rowResult.response.images.push({
+                field: field.internalid,
+                error: String(err),
+              });
+            }
+          }
+          continue; // do NOT include image fields in REST payload
+        }
+
+        const value = row[field.name];
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "");
+        if (isEmpty) continue;
+
+        if (field.fieldType === "Currency") {
+          payload[field.internalid] = parseFloat(value) || 0;
+        } else if (field.fieldType === "Checkbox") {
+          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
+          payload[field.internalid] =
+            v === true || v === 1 || v === "true" || v === "t" || v === "1" || v === "y" || v === "yes";
+        } else {
+          payload[field.internalid] = String(value);
+        }
+      }
+
+      console.log("🧩 Payload keys (non-image):", Object.keys(payload));
+
+      // --- REST PATCH for non-image fields ---
+      if (Object.keys(payload).length > 0) {
+        const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
         const { tokenId, tokenSecret } = user;
 
-        console.log(`➡️ [${environment}] PATCH ${url}`);
+        console.log(`\n➡️ [${environment}] PATCH ${url}`);
         console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
 
         const response = await fetch(url, {
@@ -645,216 +733,18 @@ async function runNextJob() {
 
         const text = await response.text();
         try {
-          rowResult.response = text ? JSON.parse(text) : { status: "No Content (204)" };
+          rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" };
         } catch {
-          rowResult.response = text || { status: "No Content (204)" };
+          rowResult.response.main = text || { status: "No Content (204)" };
         }
-
-        rowResult.status = "Success";
-        console.log(`⬅️ [${environment}] Response:`, rowResult.response);
-      } catch (err) {
-        rowResult.status = "Error";
-        rowResult.response = String(err);
-        console.error(`❌ Exception for item ${row.internalid}:`, err);
+        console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
       }
 
-      results.push(rowResult);
-      job.processed++;
-      continue;
-    }
-
-    // --- Default branch: ProductData job ---
-    const rowResult = {
-      itemId: row["Item ID"],
-      status: "Pending",
-      response: { main: null, prices: [], error: null },
-    };
-
-    try {
-      if (!row["Internal ID"]) {
-        rowResult.status = "Skipped";
-        rowResult.response = { reason: "Missing Internal ID" };
-        results.push(rowResult);
-        continue;
-      }
-
-      // --- Build main payload ---
-      const payload = {};
-      let basePriceVal;
-
-      for (const field of fieldMap) {
-        // Handle Base Price specially
-        if (field.name === "Base Price") {
-          const val = parseFloat(row[field.name]);
-          if (!isNaN(val)) basePriceVal = val;
-          continue;
-        }
-
-        // MULTI-SELECT: wrap in { items: [...] }
-        if (field.fieldType === "multiple-select") {
-          const ids = row[`${field.name}_InternalId`];
-          if (Array.isArray(ids)) {
-            payload[field.internalid] = { items: ids.map(id => ({ id: String(id) })) };
-          }
-          continue;
-        }
-
-        // SINGLE SELECT (List/Record)
-        if (field.fieldType === "List/Record") {
-          const internalId = row[`${field.name}_InternalId`] ?? null;
-          if (internalId !== null && internalId !== "") {
-            payload[field.internalid] = { id: String(internalId) };
-          }
-          continue;
-        }
-
-        // Other fields
-        const value = row[field.name];
-        const isEmpty =
-          value === undefined ||
-          value === null ||
-          (typeof value === "string" && value.trim() === "");
-
-        if (isEmpty) continue;
-
-        if (field.fieldType === "Currency") {
-          payload[field.internalid] = parseFloat(value) || 0;
-        } else if (field.fieldType === "Checkbox") {
-          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
-          payload[field.internalid] =
-            v === true || v === 1 || v === "true" || v === "t" || v === "1" || v === "y" || v === "yes";
-        } else {
-          payload[field.internalid] = String(value);
-        }
-      }
-
-      // Debug payload keys
-      console.log("🧩 Payload keys:", Object.keys(payload));
-      if (payload.custitem_sb_category) {
-        console.log("🧩 custitem_sb_category:", JSON.stringify(payload.custitem_sb_category, null, 2));
-      }
-
-      const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
-      const { tokenId, tokenSecret } = user;
-
-      console.log(`\n➡️ [${environment}] PATCH ${url}`);
-      console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
-
-      // PATCH main record
-      const response = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig),
-          "Content-Type": "application/json",
-          Prefer: "return=representation",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const text = await response.text();
-      try {
-        rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" };
-      } catch {
-        rowResult.response.main = text || { status: "No Content (204)" };
-      }
-      console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
-
-      // --- Handle Base Price update (unchanged) ---
-      if (basePriceVal !== undefined) {
-        const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
-
-        console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
-        const priceGetRes = await fetch(priceUrl, {
-          method: "GET",
-          headers: {
-            ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
-            "Content-Type": "application/json",
-          },
-        });
-
-        const priceGetText = await priceGetRes.text();
-        let priceGetData;
-        try {
-          priceGetData = JSON.parse(priceGetText);
-        } catch {
-          priceGetData = priceGetText;
-        }
-
-        if (Array.isArray(priceGetData?.items)) {
-          for (const item of priceGetData.items) {
-            const selfLink = item.links?.find((l) => l.rel === "self")?.href;
-            if (!selfLink) continue;
-
-            if (selfLink.includes("pricelevel=1")) {
-              const currentRes = await fetch(selfLink, {
-                method: "GET",
-                headers: {
-                  ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
-                  "Content-Type": "application/json",
-                },
-              });
-
-              const currentText = await currentRes.text();
-              let currentData;
-              try {
-                currentData = JSON.parse(currentText);
-              } catch {
-                currentData = currentText;
-              }
-
-              if (currentData.price !== basePriceVal) {
-                const patchBody = { price: basePriceVal };
-
-                console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
-                console.log("🔑 Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
-
-                const priceRes = await fetch(selfLink, {
-                  method: "PATCH",
-                  headers: {
-                    ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
-                    "Content-Type": "application/json",
-                    Prefer: "return=representation",
-                  },
-                  body: JSON.stringify(patchBody),
-                });
-
-                const priceText = await priceRes.text();
-                let priceData;
-                if (priceText && priceText.trim().length > 0) {
-                  try {
-                    priceData = JSON.parse(priceText);
-                  } catch {
-                    priceData = priceText;
-                  }
-                } else {
-                  priceData = { status: "No Content (204)" };
-                }
-
-                console.log(`⬅️ [${environment}] Price Response:`, priceData);
-
-                rowResult.response.prices.push({
-                  link: selfLink,
-                  newValue: basePriceVal,
-                  result: priceData,
-                });
-              } else {
-                console.log(`⚠️ Skipping ${selfLink}, already at ${basePriceVal}`);
-              }
-            }
-          }
-        } else {
-          console.warn("⚠️ Price GET did not return expected \`items\` array");
-          rowResult.response.prices.push({ error: "Unexpected GET response", data: priceGetData });
-        }
-      }
-
-      if (rowResult.response.error) {
-        rowResult.status = "Error";
-      } else if (rowResult.response.main || rowResult.response.prices.length > 0) {
-        rowResult.status = "Success";
-      } else {
-        rowResult.status = "Skipped";
-      }
+      rowResult.status =
+        rowResult.response.error ||
+        (rowResult.response.main && rowResult.response.main.error)
+          ? "Error"
+          : "Success";
     } catch (err) {
       rowResult.status = "Error";
       rowResult.response.error = String(err);
@@ -871,9 +761,6 @@ async function runNextJob() {
   jobQueue.shift();
   runNextJob();
 }
-
-
-
 
 
 

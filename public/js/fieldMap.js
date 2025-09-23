@@ -33,27 +33,17 @@ const mapenvironment = [
   {
     name: "Web Fabrics",
     SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4071&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQvzlM4oJsjY9bg35LIfIJ3beDV8rr9Zb87xgSVfh4vjM",
-    ProdUrl: ""
+    ProdUrl: "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4362&deploy=1&compid=7972741&ns-at=AAEJ7tMQuCblTEy2bK9e9ubRsyK1iJejSbpT0qKiF6gKlp70jQU"
   }, 
   {
     name: "Web Images",
-    SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4071&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQvzlM4oJsjY9bg35LIfIJ3beDV8rr9Zb87xgSVfh4vjM",
-    ProdUrl: ""
+    SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4072&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQJitxmFxKycziSYTCbda2g5B5wOaeadZmInVwV2x4its",
+    ProdUrl: "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4363&deploy=1&compid=7972741&ns-at=AAEJ7tMQj7nwNmk-xPekCtRHeFZqWvqHsTMC61_Fm5CUtqC4tJM"
   }
 ];
 
-const imagePrefix = [
-  {
-    name: "Sandbox",
-    prefix: "https://7972741-sb1.app.netsuite.com"
-  },
-  {
-    name: "Production",
-    prefix: "https://7972741.app.netsuite.com"
-  }
-]
 
-// Determine environment safely (browser vs server)
+// Determine environment
 function currentEnvironment() {
   // Browser: use localStorage set at login
   if (typeof window !== "undefined" && window.localStorage) {
@@ -73,26 +63,60 @@ function urlFor(name) {
   return currentEnvironment() === "production" ? entry.ProdUrl || "" : entry.SandboxUrl || "";
 }
 
-// --- Exported field map (shape unchanged) ---
+// --- Field Map ---
+
+// == product Development fields //
 export const fieldMap = [
-  {name: "Internal ID", internalid: "internalid", fieldType: "internalid", disableField: true },
+  {name: "internalid", disableField: true},
   { name: "Name", internalid: "itemid", fieldType: "Free-Form Text"},
   { name: "Display Name", internalid: "displayname", fieldType: "Free-Form Text" },
   { name: "Supplier Name", internalid: "vendorname", fieldType: "Free-Form Text" },
-
   { name: "Class", internalid: "class", fieldType: "List/Record", jsonFeed: urlFor("Class") },
   { name: "Purchase Price", internalid: "cost", fieldType: "Currency" },
   { name: "Base Price", internalid: "price", fieldType: "Currency" },
-
   { name: "Sub-Class", internalid: "custitem_sb_sub_class", fieldType: "List/Record", jsonFeed: urlFor("Sub-Class") },
   { name: "Lead Time", internalid: "custitem_sb_leadtime_ltd", fieldType: "List/Record", jsonFeed: urlFor("Lead Time") },
   { name: "Preferred Supplier", internalid: "vendor", fieldType: "List/Record", jsonFeed: urlFor("Preferred Supplier") },
-
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
   { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
-  { name: "Category", internalid: "custitem_sb_category", fieldType: "multiple-select", jsonFeed: urlFor("Class")},
+  ///////////////////////
+  /* WEB FIELD MAPPING */
+  ////////////////////
+  {name: "Category", internalid: "custitem_sb_category", fieldType: "multiple-select", jsonFeed: urlFor("Class")},
   {name: "Fabric", internalid: "custitem_sb_web_fabric_swatch", fieldType: "multiple-select", jsonFeed: urlFor("Web Fabrics")},
   {name: "Woo ID", internalid: "custitem_magentoid", fieldType: "Free-Form Text", disableField: true},
-  {name: "Catalogue Image One", internalid: "custitem_sb_cat_img_one", fieldType: "image"}
+  // Imagery mapping //
+  {name: "Catalogue Image One", internalid: "custitem_sb_cat_img_one", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  {name: "Catalogue Image Two", internalid:"custitem_sb_cat_img_two", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  {name: "Catalogue Image Three", internalid: "custitem_sb_cat_img_three", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  {name: "Catalogue Image Four", internalid: "custitem_sb_cat_img_four", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  {name: "Catalogue Image Five", internalid: "custitem_sb_cat_img_five", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  {name: "Item Image", internalid: "custitem_atlas_item_image", fieldType: "image", jsonFeed: urlFor("Web Images")},
+  // Imagery Mapping End // 
+  {name: "Colour Filter", internalid: "custitem_sb_colour", fieldType: "Free-Form Text"},
+  {name: "Fillings", internalid: "custitem_sb_fillings", fieldType: "Free-Form Text"},
+  {name: "Length", internalid: "custitem_sb_length", fieldType: "Free-Form Text"},
+  {name: "Turnable", internal: "custitem_sb_turnable", fieldType: "Free-Form Text"},
+  {name: "Country Of Origin", internalid: "custitem_sb_country_of_origin", fieldType: "Free-Form Text"},
+  {name: "Head End Height", internalid: "custitem_sb_head_height", fieldType: "Free-Form Text"},
+  {name: "Spring Type", internalid: "custitem_sb_spring_type", fieldType: "Free-Form Text"},
+  {name: "Warranty", internalid: "custitem_sb_warranty", fieldType: "Free-Form Text"},
+  {name: "Standard-Sizes", internalid: "custitem_sb_standard_sizes", fieldType: "Free-Form Text"},
+  {name: "Tags", internalid: "custitem_sb_tags", fieldType: "Free-Form Text", disableField: false},
+  {name: "Depth", internalid: "custitem_sb_depth", fieldType: "Free-Form Text"},
+  {name: "Height", internalid: "custitem_sb_height", fieldType: "Free-Form Text"},
+  {name: "Width", internalid: "custitem_sb_width", fieldType: "Free-Form Text"},
+  {name: "Storage", internalid: "custitem_sb_storage", fieldType: "Free-Form Text"}, 
+  {name: "Built/Flat Packed", internalid: "custitem_sb_built_flat_packed", fieldType: "Free-Form Text"},
+  {name: "Dimension Unit", internalid: "custitem_sb_dimension_unit", fieldType: "Free-Form Text"},
+  {name: "Surface", internalid: "custitem_sb_surface", fieldType: "Free-Form Text"},
+  {name: "Type", internalid: "custitem_sb_type", fieldType: "Free-Form Text"},
+  {name: "Comfort", internalid: "custitem_sb_comfort", fieldType: "Free-Form Text"},
+  // Dynmaic fields //
+  {name: "Online?", internalid: "", fieldType: "Checkbox", disableField: true},
+  {name: "Short Description", internalid:"storedescription", fieldType: "rich-text"},
+  {name: "Detailed Description", internalid:"storedetaileddescription", fieldType: "rich-text"}
+  
+
 ];

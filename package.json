@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "cross-env": "^10.0.0",
-    "electron": "^38.0.0",
+    "electron": "^38.1.2",
     "electron-builder": "^26.0.12"
   },
   "build": {
@@ -60,7 +60,9 @@
       {
         "from": "public/fonts/",
         "to": "fonts",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "directories": {
