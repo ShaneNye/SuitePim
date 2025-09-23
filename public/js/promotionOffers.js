@@ -46,7 +46,7 @@ function renderPromotionUI(container) {
   wrapper.className = "promo-wrapper";
   container.appendChild(wrapper);
 
-  // Promotion Title with save/edit
+  // --- Promotion Title ---
   const titleWrap = document.createElement("div");
   titleWrap.className = "promo-title-wrap";
 
@@ -55,15 +55,15 @@ function renderPromotionUI(container) {
   titleInput.placeholder = "Enter promotion name...";
   titleInput.className = "promo-title-input";
 
-  const saveBtn = document.createElement("button");
-  saveBtn.textContent = "Save";
-  saveBtn.className = "btn primary";
+  const saveTitleBtn = document.createElement("button");
+  saveTitleBtn.textContent = "Save Title";
+  saveTitleBtn.className = "btn primary";
 
   titleWrap.appendChild(titleInput);
-  titleWrap.appendChild(saveBtn);
+  titleWrap.appendChild(saveTitleBtn);
   wrapper.appendChild(titleWrap);
 
-  saveBtn.onclick = () => {
+  saveTitleBtn.onclick = () => {
     const value = titleInput.value.trim();
     if (!value) return;
     titleWrap.innerHTML = `
@@ -74,16 +74,27 @@ function renderPromotionUI(container) {
     editBtn.onclick = () => {
       titleWrap.innerHTML = "";
       titleWrap.appendChild(titleInput);
-      titleWrap.appendChild(saveBtn);
+      titleWrap.appendChild(saveTitleBtn);
     };
   };
 
+  // --- Add Section Button ---
   const addSectionBtn = document.createElement("button");
   addSectionBtn.textContent = "+ Add Section";
   addSectionBtn.className = "btn primary";
+  addSectionBtn.style.margin = "15px 0";
   addSectionBtn.onclick = () => createSection(wrapper);
   wrapper.appendChild(addSectionBtn);
+
+  // --- Save Promotion Button (global) ---
+  const savePromotionBtn = document.createElement("button");
+  savePromotionBtn.textContent = "💾 Save Promotion";
+  savePromotionBtn.className = "btn primary";
+  savePromotionBtn.style.marginTop = "20px";
+  savePromotionBtn.onclick = () => savePromotion(wrapper);
+  wrapper.appendChild(savePromotionBtn);
 }
+
 
 // --- CREATE SECTION ---
 function createSection(container) {
@@ -609,6 +620,34 @@ style.textContent = `
   .modal-actions { margin-top:10px; display:flex; justify-content:flex-end; gap:10px; }
 `;
 document.head.appendChild(style);
+
+async function savePromotion(wrapper) {
+  const data = collectPromotionData(wrapper);
+  const fileName = data.title.replace(/\s+/g, "-").toLowerCase() || "promotion";
+
+  try {
+    const res = await fetch("/api/savePromotion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileName,
+        content: JSON.stringify(data, null, 2),
+      }),
+    });
+    const result = await res.json();
+    if (res.ok) {
+      alert("✅ Promotion saved to GitHub!");
+      console.log(result);
+    } else {
+      alert("❌ Failed to save promotion");
+      console.error(result);
+    }
+  } catch (err) {
+    console.error("Error:", err);
+    alert("❌ Error saving promotion");
+  }
+}
+
 
 // --- BOOTSTRAP ---
 window.addEventListener("DOMContentLoaded", loadPromotionPage);

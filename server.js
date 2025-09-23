@@ -392,6 +392,52 @@ app.get("/issues", async (req, res) => {
   }
 });
 
+
+// ------------------------------
+// promotion and offers upload to git
+//---------------------------------
+
+const { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO } = process.env;
+
+app.post("/api/savePromotion", express.json(), async (req, res) => {
+  try {
+    const { fileName, content } = req.body; // content will be JSON string
+
+    const path = `promotions/${fileName}.json`;
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+
+    // Check if file already exists → get its SHA for update
+    let sha;
+    const getRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}` },
+    });
+    if (getRes.ok) {
+      const data = await getRes.json();
+      sha = data.sha;
+    }
+
+    // Save/update file
+    const result = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `Save promotion ${fileName}`,
+        content: Buffer.from(content).toString("base64"),
+        sha, // only include if updating
+      }),
+    });
+
+    const json = await result.json();
+    res.json(json);
+  } catch (err) {
+    console.error("Error saving promotion:", err);
+    res.status(500).json({ error: "Failed to save promotion" });
+  }
+});
+
 // -----------------------------
 // Logout
 // -----------------------------
