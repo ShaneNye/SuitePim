@@ -90,9 +90,20 @@
               "value": "15"
             }
           ]
+        },
+        {
+          "label": "moonstone",
+          "discount": "",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Moonstone"
+            }
+          ]
         }
       ]
     }
   ],
-  "savedAt": "2025-09-24T07:56:22.447Z"
+  "savedAt": "2025-09-24T11:03:29.160Z"
 }
