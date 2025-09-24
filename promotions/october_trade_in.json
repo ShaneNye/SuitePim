@@ -61,42 +61,7 @@
           ]
         }
       ]
-    },
-    {
-      "label": "GemStone Mattresses",
-      "rows": [
-        {
-          "label": "Emerald",
-          "discount": "20",
-          "pos": "",
-          "filters": [
-            {
-              "field": "Name",
-              "value": "Emerald"
-            },
-            {
-              "field": "Class",
-              "value": "15"
-            }
-          ]
-        },
-        {
-          "label": "Sapphire",
-          "discount": "",
-          "pos": "",
-          "filters": [
-            {
-              "field": "Name",
-              "value": "Sapphire"
-            },
-            {
-              "field": "Class",
-              "value": "15"
-            }
-          ]
-        }
-      ]
     }
   ],
-  "savedAt": "2025-09-24T11:39:49.212Z"
+  "savedAt": "2025-09-24T11:54:12.478Z"
 }
