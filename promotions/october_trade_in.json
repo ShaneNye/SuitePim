@@ -3,11 +3,14 @@
   "sections": [
     {
       "label": "test Run",
+      "color": "rgba(234, 16, 16, 0.2)",
       "rows": [
         {
           "label": "Gel Essence Comfort",
           "discount": "50",
           "pos": "",
+          "discPos": "",
+          "other": "",
           "filters": [
             {
               "field": "Name",
@@ -23,6 +26,8 @@
           "label": "Gel Essence Ortho",
           "discount": "60",
           "pos": "",
+          "discPos": "",
+          "other": "",
           "filters": [
             {
               "field": "Name",
@@ -38,6 +43,8 @@
           "label": "Gel Plush Comfort",
           "discount": "25",
           "pos": "",
+          "discPos": "",
+          "other": "",
           "filters": [
             {
               "field": "Name",
@@ -49,6 +56,8 @@
           "label": "Gel Plush Ortho",
           "discount": "25",
           "pos": "",
+          "discPos": "",
+          "other": "",
           "filters": [
             {
               "field": "Name",
@@ -59,5 +68,5 @@
       ]
     }
   ],
-  "savedAt": "2025-09-24T14:27:21.951Z"
+  "savedAt": "2025-09-24T14:31:24.440Z"
 }
