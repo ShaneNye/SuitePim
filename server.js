@@ -8,7 +8,8 @@ import OAuth from "oauth-1.0a";
 import crypto from "crypto";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-
+import WooCommerceRestApiPkg from "@woocommerce/woocommerce-rest-api";
+const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPkg;
 // ✅ Load .env safely (no crash if missing)
 import fs from "fs";
 
@@ -32,7 +33,6 @@ try {
 } catch (err) {
   console.error("❌ Failed to load .env:", err.message);
 }
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,7 +79,6 @@ const NETSUITE_SANDBOX = {
   restUrl: process.env.NETSUITE_SANDBOX_URL,
 };
 
-
 const NETSUITE_PROD = {
   account: process.env.NETSUITE_PROD_ACCOUNT,
   accountDash: process.env.NETSUITE_PROD_ACCOUNT_DASH,
@@ -87,7 +86,6 @@ const NETSUITE_PROD = {
   consumerSecret: process.env.NETSUITE_PROD_SECRET,
   restUrl: process.env.NETSUITE_PROD_URL,
 };
-
 
 // Helper to map string -> config
 function getEnvConfigFromName(name) {
@@ -98,6 +96,38 @@ function getEnvConfigFromName(name) {
 function getEnvConfig(req) {
   return getEnvConfigFromName(req?.session?.environment);
 }
+
+/* -----------------------------
+   WooCommerce Environment Configs
+------------------------------*/
+const WOO_SANDBOX = {
+  url: process.env.WOOCOMMERCE_URL_SANDBOX,
+  key: process.env.WOOCOMMERCE_SANDBOX_KEY,
+  secret: process.env.WOOCOMMERCE_SANDBOX_SECRET,
+};
+
+const WOO_PROD = {
+  url: process.env.WOOCOMMERCE_PROD_URL,
+  key: process.env.WOOCOMMERCE_PROD_KEY,
+  secret: process.env.WOOCOMMERCE_PROD_SECRET,
+};
+
+// Helper to map string -> WooCommerce config
+function getWooConfigFromName(name) {
+  return (String(name || "").toLowerCase() === "production") ? WOO_PROD : WOO_SANDBOX;
+}
+
+function getWooApi(envName) {
+  const cfg = getWooConfigFromName(envName);
+  console.log("🔍 Woo config being used:", cfg); // Debug
+  return new WooCommerceRestApi({
+    url: cfg.url,
+    consumerKey: cfg.key,
+    consumerSecret: cfg.secret,
+    version: "wc/v3",
+  });
+}
+
 
 /* -----------------------------
    OAuth helpers (per environment)
@@ -394,49 +424,160 @@ app.get("/issues", async (req, res) => {
 
 
 // ------------------------------
-// promotion and offers upload to git
-//---------------------------------
+// Promotions API: save, list, load
+// ------------------------------
 
 const { GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO } = process.env;
 
-app.post("/api/savePromotion", express.json(), async (req, res) => {
+
+
+// --- SAVE PROMOTION --
+// --- SAVE PROMOTION TO GITHUB ---
+app.post("/api/savePromotion", async (req, res) => {
   try {
-    const { fileName, content } = req.body; // content will be JSON string
-
-    const path = `promotions/${fileName}.json`;
-    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
-
-    // Check if file already exists → get its SHA for update
-    let sha;
-    const getRes = await fetch(apiUrl, {
-      headers: { Authorization: `token ${GITHUB_TOKEN}` },
-    });
-    if (getRes.ok) {
-      const data = await getRes.json();
-      sha = data.sha;
+    const { fileName, content } = req.body;
+    if (!fileName || !content) {
+      return res.status(400).json({ error: "Missing fileName or content" });
     }
 
-    // Save/update file
-    const result = await fetch(apiUrl, {
+    const path = `promotions/${fileName}.json`;
+    const apiUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/${path}`;
+
+    // Fetch current file SHA (if exists)
+    let sha = null;
+    const existingRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    });
+    if (existingRes.ok) {
+      const existing = await existingRes.json();
+      sha = existing.sha;
+    }
+
+    // Commit file to GitHub
+    const ghRes = await fetch(apiUrl, {
       method: "PUT",
       headers: {
-        Authorization: `token ${GITHUB_TOKEN}`,
+        Authorization: `token ${process.env.GITHUB_TOKEN}`,
         "Content-Type": "application/json",
+        Accept: "application/vnd.github+json",
       },
       body: JSON.stringify({
-        message: `Save promotion ${fileName}`,
+        message: `Save promotion ${fileName}.json`,
         content: Buffer.from(content).toString("base64"),
-        sha, // only include if updating
+        sha, // include only if updating
       }),
     });
 
-    const json = await result.json();
-    res.json(json);
+    const data = await ghRes.json();
+
+    if (!ghRes.ok) {
+      console.error("❌ GitHub save failed:", data);
+      return res.status(500).json({ error: "GitHub save failed", details: data });
+    }
+
+    res.json({ success: true, file: data.content.path });
   } catch (err) {
-    console.error("Error saving promotion:", err);
-    res.status(500).json({ error: "Failed to save promotion" });
+    console.error("❌ Save promotion error:", err);
+    res.status(500).json({ error: "Server error", details: String(err) });
   }
 });
+
+// enqueue promotion push job
+app.post("/push-promotion", authMiddleware, (req, res) => {
+  const rowsToPush = req.body.rows;
+  if (!rowsToPush || rowsToPush.length === 0) {
+    return res.status(400).json({ success: false, message: "No products to push" });
+  }
+
+  const jobId = createJobId();
+  const envConfig = getEnvConfig(req); // Sandbox/Prod based on session
+  const environment = req.session.environment || "Sandbox";
+
+  jobs[jobId] = {
+    type: "promotion-push",      // 👈 important for runNextJob
+    status: "pending",
+    total: rowsToPush.length,
+    processed: 0,
+    results: [],
+    rows: rowsToPush,            // [{ id, salePrice }]
+    user: req.session.user,
+    envConfig,
+    environment,
+    createdAt: new Date(),
+  };
+
+  jobQueue.push(jobId);
+  if (jobQueue.length === 1) runNextJob();
+
+  res.json({
+    success: true,
+    message: `Promotion push queued with ${rowsToPush.length} product(s)`,
+    jobId,
+    queuePos: jobQueue.indexOf(jobId) + 1,
+    queueTotal: jobQueue.length,
+  });
+});
+
+
+
+
+
+// --- LIST PROMOTIONS ---
+app.get("/api/promotions", async (req, res) => {
+  try {
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/promotions`;
+    const ghRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}` },
+    });
+
+    if (!ghRes.ok) {
+      const err = await ghRes.text();
+      console.error("❌ Failed to fetch promotions list:", err);
+      return res.status(500).json({ error: "Failed to fetch promotions" });
+    }
+
+    const files = await ghRes.json();
+    const promotions = files
+      .filter((f) => f.name.endsWith(".json"))
+      .map((f) => ({
+        name: f.name.replace(".json", ""), // "test_promotion"
+        path: f.path, // "promotions/test_promotion.json"
+      }));
+
+    res.json(promotions);
+  } catch (err) {
+    console.error("❌ Error listing promotions:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// --- GET PROMOTION DETAIL ---
+app.get("/api/promotions/:name", async (req, res) => {
+  try {
+    const { name } = req.params; // e.g. "test_promotion"
+    const path = `promotions/${name}.json`;
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+
+    const ghRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}` },
+    });
+
+    if (!ghRes.ok) {
+      const err = await ghRes.text();
+      console.error("❌ Failed to fetch promotion:", err);
+      return res.status(500).json({ error: "Failed to fetch promotion" });
+    }
+
+    const file = await ghRes.json();
+    const content = Buffer.from(file.content, "base64").toString("utf-8");
+    res.json(JSON.parse(content));
+  } catch (err) {
+    console.error("❌ Error fetching promotion:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 
 // -----------------------------
 // Logout
@@ -663,6 +804,213 @@ async function runNextJob() {
   for (const row of rows) {
     if (!jobs[jobId]) return; // cancelled mid-run
 
+    // --- Validation jobs ---
+    if (type === "validation") {
+      const rowResult = { internalid: row.internalid, status: "Pending", response: null };
+
+      try {
+        if (!row.internalid) {
+          rowResult.status = "Skipped";
+          rowResult.response = { reason: "Missing Internal ID" };
+          results.push(rowResult);
+          continue;
+        }
+
+        const payload = row.fields || {};
+        const url = `${envConfig.restUrl}/inventoryItem/${row.internalid}`;
+        const { tokenId, tokenSecret } = user;
+
+        console.log(`➡️ [${environment}] PATCH ${url}`);
+        console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
+
+        const response = await fetch(url, {
+          method: "PATCH",
+          headers: {
+            ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig),
+            "Content-Type": "application/json",
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const text = await response.text();
+        try {
+          rowResult.response = text ? JSON.parse(text) : { status: "No Content (204)" };
+        } catch {
+          rowResult.response = text || { status: "No Content (204)" };
+        }
+
+        rowResult.status = "Success";
+        console.log(`⬅️ [${environment}] Response:`, rowResult.response);
+      } catch (err) {
+        rowResult.status = "Error";
+        rowResult.response = String(err);
+        console.error(`❌ Exception for item ${row.internalid}:`, err);
+      }
+
+      results.push(rowResult);
+      job.processed++;
+      continue;
+    }
+
+// --- Promotion Push jobs (Sale Price updates) ---
+if (type === "promotion-push") {
+  const rowResult = { id: row.id, name: row.name, status: "Pending", response: {} };
+
+  try {
+    const priceUrl = `${envConfig.restUrl}/inventoryItem/${row.id}/price`;
+    const { tokenId, tokenSecret } = user;
+
+    console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
+    const priceGetRes = await fetch(priceUrl, {
+      method: "GET",
+      headers: {
+        ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
+        "Content-Type": "application/json",
+      },
+    });
+
+    const priceGetText = await priceGetRes.text();
+    let priceGetData;
+    try {
+      priceGetData = JSON.parse(priceGetText);
+    } catch {
+      priceGetData = priceGetText;
+    }
+
+    if (Array.isArray(priceGetData?.items)) {
+      for (const item of priceGetData.items) {
+        const selfLink = item.links?.find((l) => l.rel === "self")?.href;
+        if (!selfLink) continue;
+
+        // ✅ Sale Price level is internalId = 4
+        if (selfLink.includes("pricelevel=4")) {
+          const currentRes = await fetch(selfLink, {
+            method: "GET",
+            headers: {
+              ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
+              "Content-Type": "application/json",
+            },
+          });
+
+          const currentText = await currentRes.text();
+          let currentData;
+          try {
+            currentData = JSON.parse(currentText);
+          } catch {
+            currentData = currentText;
+          }
+
+          const newSalePrice = parseFloat(row.salePrice);
+          const newRegularPrice = parseFloat(row.basePrice || 0);
+
+          if (currentData.price !== newSalePrice) {
+            const patchBody = { price: newSalePrice };
+
+            console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
+            console.log("🔑 Sale Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
+
+            const priceRes = await fetch(selfLink, {
+              method: "PATCH",
+              headers: {
+                ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
+                "Content-Type": "application/json",
+                Prefer: "return=representation",
+              },
+              body: JSON.stringify(patchBody),
+            });
+
+            const priceText = await priceRes.text();
+            let priceData;
+            try {
+              priceData = JSON.parse(priceText);
+            } catch {
+              priceData = priceText;
+            }
+
+            console.log(`⬅️ Sale Price Response (NetSuite):`, priceData);
+
+            rowResult.response.netsuite = priceData;
+            rowResult.status = "Success";
+          } else {
+            console.log(`⚠️ Skipping ${row.name}, Sale Price already ${newSalePrice}`);
+            rowResult.response.netsuite = { skipped: true, reason: "Already correct" };
+            rowResult.status = "Skipped";
+          }
+
+          // --- 🔄 Sync to WooCommerce ---
+          try {
+            const wooApi = getWooApi(environment);
+
+            if (row.wooId) {
+              // Fetch Woo product to check if it's a variation
+              const { data: product } = await wooApi.get(`products/${row.wooId}`);
+
+              if (product.parent_id && product.parent_id !== 0) {
+                // Variation
+                await wooApi.put(`products/${product.parent_id}/variations/${product.id}`, {
+                  regular_price: newRegularPrice.toFixed(2),
+                  sale_price: newSalePrice.toFixed(2),
+                });
+
+                console.log(
+                  `✅ WooCommerce updated Variation ${product.id} (Parent ${product.parent_id}): regular_price ${newRegularPrice}, sale_price ${newSalePrice}`
+                );
+                rowResult.response.woocommerce = {
+                  success: true,
+                  wooId: product.id,
+                  parentId: product.parent_id,
+                  newRegularPrice,
+                  newSalePrice,
+                };
+              } else {
+                // Simple product
+                await wooApi.put(`products/${product.id}`, {
+                  regular_price: newRegularPrice.toFixed(2),
+                  sale_price: newSalePrice.toFixed(2),
+                });
+
+                console.log(
+                  `✅ WooCommerce updated Product ${product.id}: regular_price ${newRegularPrice}, sale_price ${newSalePrice}`
+                );
+                rowResult.response.woocommerce = {
+                  success: true,
+                  wooId: product.id,
+                  newRegularPrice,
+                  newSalePrice,
+                };
+              }
+            } else {
+              console.warn(`⚠️ No Woo Id for product ${row.id}`);
+              rowResult.response.woocommerce = { skipped: true, reason: "Missing Woo Id" };
+            }
+          } catch (wooErr) {
+            console.error(
+              `❌ WooCommerce update failed for Woo Id ${row.wooId || row.id}:`,
+              wooErr.message
+            );
+            rowResult.response.woocommerce = { error: wooErr.message };
+          }
+        }
+      }
+    } else {
+      rowResult.status = "Error";
+      rowResult.response.netsuite = { error: "Unexpected GET response", data: priceGetData };
+    }
+  } catch (err) {
+    console.error(`❌ Error updating Sale Price for ${row.name}:`, err);
+    rowResult.status = "Error";
+    rowResult.response = { error: String(err) };
+  }
+
+  results.push(rowResult);
+  job.processed++;
+  continue;
+}
+
+
+
+    // --- Default ProductData jobs ---
     const rowResult = {
       itemId: row["Item ID"],
       status: "Pending",
@@ -677,7 +1025,7 @@ async function runNextJob() {
         continue;
       }
 
-      // --- Build main payload (non-image fields only) ---
+      // Build payload
       const payload = {};
       let basePriceVal;
 
@@ -724,19 +1072,13 @@ async function runNextJob() {
               }
               console.log("⬅️ Suitelet response:", data);
 
-              rowResult.response.images.push({
-                field: field.internalid,
-                result: data,
-              });
+              rowResult.response.images.push({ field: field.internalid, result: data });
             } catch (err) {
               console.error("❌ Suitelet call failed:", err);
-              rowResult.response.images.push({
-                field: field.internalid,
-                error: String(err),
-              });
+              rowResult.response.images.push({ field: field.internalid, error: String(err) });
             }
           }
-          continue; // do NOT include image fields in REST payload
+          continue;
         }
 
         const value = row[field.name];
@@ -759,11 +1101,10 @@ async function runNextJob() {
 
       console.log("🧩 Payload keys (non-image):", Object.keys(payload));
 
-      // --- REST PATCH for non-image fields ---
-      if (Object.keys(payload).length > 0) {
-        const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
-        const { tokenId, tokenSecret } = user;
+      const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
+      const { tokenId, tokenSecret } = user;
 
+      if (Object.keys(payload).length > 0) {
         console.log(`\n➡️ [${environment}] PATCH ${url}`);
         console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
 
@@ -786,9 +1127,90 @@ async function runNextJob() {
         console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
       }
 
+      // Handle Base Price update
+      if (basePriceVal !== undefined) {
+        const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
+
+        console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
+        const priceGetRes = await fetch(priceUrl, {
+          method: "GET",
+          headers: {
+            ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
+            "Content-Type": "application/json",
+          },
+        });
+
+        const priceGetText = await priceGetRes.text();
+        let priceGetData;
+        try {
+          priceGetData = JSON.parse(priceGetText);
+        } catch {
+          priceGetData = priceGetText;
+        }
+
+        if (Array.isArray(priceGetData?.items)) {
+          for (const item of priceGetData.items) {
+            const selfLink = item.links?.find((l) => l.rel === "self")?.href;
+            if (!selfLink) continue;
+
+            if (selfLink.includes("pricelevel=1")) {
+              const currentRes = await fetch(selfLink, {
+                method: "GET",
+                headers: {
+                  ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
+                  "Content-Type": "application/json",
+                },
+              });
+
+              const currentText = await currentRes.text();
+              let currentData;
+              try {
+                currentData = JSON.parse(currentText);
+              } catch {
+                currentData = currentText;
+              }
+
+              if (currentData.price !== basePriceVal) {
+                const patchBody = { price: basePriceVal };
+
+                console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
+                console.log("🔑 Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
+
+                const priceRes = await fetch(selfLink, {
+                  method: "PATCH",
+                  headers: {
+                    ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
+                    "Content-Type": "application/json",
+                    Prefer: "return=representation",
+                  },
+                  body: JSON.stringify(patchBody),
+                });
+
+                const priceText = await priceRes.text();
+                let priceData;
+                try {
+                  priceData = JSON.parse(priceText);
+                } catch {
+                  priceData = priceText;
+                }
+
+                console.log(`⬅️ Price Response:`, priceData);
+
+                rowResult.response.prices.push({ link: selfLink, newValue: basePriceVal, result: priceData });
+              } else {
+                console.log(`⚠️ Skipping ${selfLink}, already at ${basePriceVal}`);
+              }
+            }
+          }
+        } else {
+          console.warn("⚠️ Price GET did not return expected `items` array");
+          rowResult.response.prices.push({ error: "Unexpected GET response", data: priceGetData });
+        }
+      }
+
       rowResult.status =
         rowResult.response.error ||
-        (rowResult.response.main && rowResult.response.main.error)
+          (rowResult.response.main && rowResult.response.main.error)
           ? "Error"
           : "Success";
     } catch (err) {
@@ -807,9 +1229,6 @@ async function runNextJob() {
   jobQueue.shift();
   runNextJob();
 }
-
-
-
 
 // enqueue job with the current env
 // enqueue job with the current env
