@@ -1,0 +1,102 @@
+{
+  "title": "October Trade In",
+  "sections": [
+    {
+      "label": "Bed Frames",
+      "rows": [
+        {
+          "label": "A Group Bed Frames",
+          "discount": "25",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "32"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "B Group Bed Frames",
+          "discount": "",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "33"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "C Group Bed Frames",
+          "discount": "30",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "34"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "D Group Bed Frames",
+          "discount": "20",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "35"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "GemStone Mattresses",
+      "rows": [
+        {
+          "label": "Emerald",
+          "discount": "20",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Emerald"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        },
+        {
+          "label": "Sapphire",
+          "discount": "",
+          "pos": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Sapphire"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-09-24T11:39:49.212Z"
+}
