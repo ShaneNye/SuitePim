@@ -76,7 +76,7 @@ export const fieldMap = [
   { name: "Base Price", internalid: "price", fieldType: "Currency" },
   { name: "Sub-Class", internalid: "custitem_sb_sub_class", fieldType: "List/Record", jsonFeed: urlFor("Sub-Class") },
   { name: "Lead Time", internalid: "custitem_sb_leadtime_ltd", fieldType: "List/Record", jsonFeed: urlFor("Lead Time") },
-  { name: "Preferred Supplier", internalid: "vendor", fieldType: "List/Record", jsonFeed: urlFor("Preferred Supplier") },
+  { name: "Preferred Supplier", internalid: "vendor", fieldType: "List/Record", jsonFeed: urlFor("Preferred Supplier"),},
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
   { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },

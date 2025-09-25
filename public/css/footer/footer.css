@@ -1,31 +1,35 @@
+/* --- Footer --- */
 .footer {
-    background: linear-gradient(180deg, #006F91 0%, #0081AB 100%);
-    color: white;
-    text-align: center;
-    padding: .5rem;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    box-shadow:
-        inset 0 3px 6px rgba(0, 0, 0, 0.2),
-        0 -4px 8px rgba(0, 0, 0, 0.15);
+  background: linear-gradient(180deg, #006F91 0%, #0081AB 100%);
+  color: white;
+  text-align: center;
+  padding: .5rem;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding-top: .5rem;
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.2),
+    0 -4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .footer-content p {
-    margin: 0.1rem 0;
-    font-size: 0.9rem;
+  margin: 0.1rem 0;
+  font-size: 0.9rem;
 }
 
 .footer a {
-    color: #FFD700;
-    text-decoration: none;
-    font-weight: bold;
+  color: #FFD700;
+  text-decoration: none;
+  font-weight: bold;
 }
 
 .footer a:hover {
-    text-decoration: underline;
+  text-decoration: underline;
 }
+
+/* --- Footer Status Bar --- */
 .footer-status {
   margin-top: 0.5rem;
   width: 100%;
@@ -53,4 +57,178 @@
 .progress-text {
   font-size: 0.9rem;
   margin: 0;
+}
+
+/* --- Footer Logs Button --- */
+.footer .footer-log-btn {
+  position: absolute;
+  left: 1rem;
+  bottom: 0.4rem;
+
+  background: #FFD700;
+  color: #004C63;
+  border: none;
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+.footer .footer-log-btn:hover {
+  background: #FFC107;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.footer .footer-log-btn:active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+/* --- Log Modal --- */
+.log-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+}
+.log-modal.hidden { display: none; }
+
+.log-modal-content {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  width: 85%;
+  max-width: 800px;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.log-modal-close {
+  align-self: flex-end;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#log-output {
+  background: #111;
+  color: #0f0;
+  padding: 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 60vh;
+  margin-bottom: 1rem;
+}
+
+.report-issue-btn {
+  align-self: flex-start;
+  background: #d73a4a;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.report-issue-btn:hover {
+  background: #c53030;
+}
+
+/* --- Report Issue Modal --- */
+.report-issue-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 3000;
+}
+.report-issue-modal.hidden { display: none; }
+
+.report-issue-modal-content {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.report-issue-modal-close {
+  align-self: flex-end;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+.report-issue-modal-content h2 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  color: #006F91;
+}
+
+/* --- Report Issue Form Elements --- */
+.report-issue-modal-content input[type="text"],
+.report-issue-modal-content textarea {
+  width: 100%;
+  box-sizing: border-box; /* ✅ prevents overflow */
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.report-issue-modal-content textarea {
+  height: 150px;
+  resize: vertical;
+}
+
+/* --- Report Issue Actions --- */
+.report-issue-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.cancel-issue-btn,
+.save-issue-btn {
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cancel-issue-btn {
+  background: #aaa;
+  color: #fff;
+}
+
+.save-issue-btn {
+  background: #006F91;
+  color: #fff;
+}
+.save-issue-btn:hover {
+  background: #0081AB;
 }

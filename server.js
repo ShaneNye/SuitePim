@@ -9,9 +9,14 @@ import crypto from "crypto";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import WooCommerceRestApiPkg from "@woocommerce/woocommerce-rest-api";
-const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPkg;
-// ✅ Load .env safely (no crash if missing)
 import fs from "fs";
+
+// ✅ WooCommerce API import
+const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPkg;
+
+// ✅ Setup dirname/filename (must be before using __dirname anywhere)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // ✅ Safe .env loader (works in dev + packaged)
 try {
@@ -34,8 +39,6 @@ try {
   console.error("❌ Failed to load .env:", err.message);
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 // ✅ Dynamic imports for local modules (safe in dev + packaged)
 let users = [];
@@ -56,6 +59,13 @@ try {
 
 const app = express();
 const PORT = 3000;
+
+
+app.get("/fonts/:file", (req, res, next) => {
+  console.log("🔎 Font requested:", req.params.file);
+  next();
+});
+
 
 // ✅ Serve static files
 const staticPath = path.join(__dirname, "public");
@@ -119,7 +129,6 @@ function getWooConfigFromName(name) {
 
 function getWooApi(envName) {
   const cfg = getWooConfigFromName(envName);
-  console.log("🔍 Woo config being used:", cfg); // Debug
   return new WooCommerceRestApi({
     url: cfg.url,
     consumerKey: cfg.key,
@@ -158,8 +167,8 @@ function getAuthHeader(url, method, tokenId, tokenSecret, envCfg) {
    Middleware
 ------------------------------*/
 app.use(express.static(join(__dirname, "public")));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 
 app.use(
   session({
@@ -236,6 +245,33 @@ app.get("/get-user", (req, res) => {
     res.json({ username: null });
   }
 });
+
+
+/*-----------------------------
+/ Get logs for UI
+/-----------------------------*/
+
+// server.js
+const logs = [];
+const MAX_LOGS = 50; // keep the last 50 lines
+
+// Monkey-patch console.log and console.error
+["log", "error", "warn"].forEach((method) => {
+  const original = console[method];
+  console[method] = (...args) => {
+    const message = args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+    const entry = `[${new Date().toISOString()}] [${method.toUpperCase()}] ${message}`;
+    logs.push(entry);
+    if (logs.length > MAX_LOGS) logs.shift(); // keep buffer small
+    original.apply(console, args);
+  };
+});
+
+// Serve logs endpoint
+app.get("/logs", (req, res) => {
+  res.type("text/plain").send(logs.join("\n"));
+});
+
 
 /* -----------------------------
    Support: GitHub Issues
@@ -645,11 +681,6 @@ app.get("/issues/:number/comments", async (req, res) => {
   try {
     const { number } = req.params;
 
-    console.log("🔍 Fetching comments for issue:", number, {
-      owner: process.env.GITHUB_OWNER,
-      repo: process.env.GITHUB_REPO,
-      hasToken: !!process.env.GITHUB_TOKEN
-    });
 
     const ghRes = await fetch(
       `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues/${number}/comments`,
@@ -797,9 +828,7 @@ async function runNextJob() {
   const results = [];
   const { rows, user, envConfig, environment, type } = job;
 
-  console.log(`\n🌐 Environment: ${environment} (${envConfig.accountDash})`);
-  console.log(`👤 User: ${user.username}`);
-  console.log(`🧾 Records to send: ${rows.length}`);
+  console.log(`\n🌐 Environment: ${environment} (${envConfig.accountDash}) | 👤 User: ${user.username} | 🧾 Records: ${rows.length}`);
 
   for (const row of rows) {
     if (!jobs[jobId]) return; // cancelled mid-run
@@ -807,7 +836,6 @@ async function runNextJob() {
     // --- Validation jobs ---
     if (type === "validation") {
       const rowResult = { internalid: row.internalid, status: "Pending", response: null };
-
       try {
         if (!row.internalid) {
           rowResult.status = "Skipped";
@@ -820,8 +848,8 @@ async function runNextJob() {
         const url = `${envConfig.restUrl}/inventoryItem/${row.internalid}`;
         const { tokenId, tokenSecret } = user;
 
-        console.log(`➡️ [${environment}] PATCH ${url}`);
-        console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
+        console.log(`➡️ [Validation] PATCH ${url}`);
+        console.log("   Payload:", JSON.stringify(payload));
 
         const response = await fetch(url, {
           method: "PATCH",
@@ -834,18 +862,15 @@ async function runNextJob() {
         });
 
         const text = await response.text();
-        try {
-          rowResult.response = text ? JSON.parse(text) : { status: "No Content (204)" };
-        } catch {
-          rowResult.response = text || { status: "No Content (204)" };
-        }
+        try { rowResult.response = text ? JSON.parse(text) : { status: "No Content (204)" }; }
+        catch { rowResult.response = text || { status: "No Content (204)" }; }
 
+        console.log("⬅️ [Validation] Response:", rowResult.response);
         rowResult.status = "Success";
-        console.log(`⬅️ [${environment}] Response:`, rowResult.response);
       } catch (err) {
         rowResult.status = "Error";
         rowResult.response = String(err);
-        console.error(`❌ Exception for item ${row.internalid}:`, err);
+        console.error("❌ Validation exception:", err);
       }
 
       results.push(rowResult);
@@ -853,169 +878,101 @@ async function runNextJob() {
       continue;
     }
 
-// --- Promotion Push jobs (Sale Price updates) ---
-if (type === "promotion-push") {
-  const rowResult = { id: row.id, name: row.name, status: "Pending", response: {} };
+    // --- Promotion Push jobs ---
+    if (type === "promotion-push") {
+      const rowResult = { id: row.id, name: row.name, status: "Pending", response: {} };
 
-  try {
-    const priceUrl = `${envConfig.restUrl}/inventoryItem/${row.id}/price`;
-    const { tokenId, tokenSecret } = user;
+      try {
+        const priceUrl = `${envConfig.restUrl}/inventoryItem/${row.id}/price`;
+        const { tokenId, tokenSecret } = user;
 
-    console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
-    const priceGetRes = await fetch(priceUrl, {
-      method: "GET",
-      headers: {
-        ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
-        "Content-Type": "application/json",
-      },
-    });
+        const priceGetRes = await fetch(priceUrl, {
+          method: "GET",
+          headers: { ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
+        });
 
-    const priceGetText = await priceGetRes.text();
-    let priceGetData;
-    try {
-      priceGetData = JSON.parse(priceGetText);
-    } catch {
-      priceGetData = priceGetText;
-    }
+        const priceGetText = await priceGetRes.text();
+        let priceGetData; try { priceGetData = JSON.parse(priceGetText); } catch { priceGetData = priceGetText; }
 
-    if (Array.isArray(priceGetData?.items)) {
-      for (const item of priceGetData.items) {
-        const selfLink = item.links?.find((l) => l.rel === "self")?.href;
-        if (!selfLink) continue;
+        if (Array.isArray(priceGetData?.items)) {
+          for (const item of priceGetData.items) {
+            const selfLink = item.links?.find((l) => l.rel === "self")?.href;
+            if (!selfLink || !selfLink.includes("pricelevel=4")) continue;
 
-        // ✅ Sale Price level is internalId = 4
-        if (selfLink.includes("pricelevel=4")) {
-          const currentRes = await fetch(selfLink, {
-            method: "GET",
-            headers: {
-              ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
-              "Content-Type": "application/json",
-            },
-          });
-
-          const currentText = await currentRes.text();
-          let currentData;
-          try {
-            currentData = JSON.parse(currentText);
-          } catch {
-            currentData = currentText;
-          }
-
-          const newSalePrice = parseFloat(row.salePrice);
-          const newRegularPrice = parseFloat(row.basePrice || 0);
-
-          if (currentData.price !== newSalePrice) {
-            const patchBody = { price: newSalePrice };
-
-            console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
-            console.log("🔑 Sale Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
-
-            const priceRes = await fetch(selfLink, {
-              method: "PATCH",
-              headers: {
-                ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
-                "Content-Type": "application/json",
-                Prefer: "return=representation",
-              },
-              body: JSON.stringify(patchBody),
+            const currentRes = await fetch(selfLink, {
+              method: "GET",
+              headers: { ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
             });
+            const currentText = await currentRes.text();
+            let currentData; try { currentData = JSON.parse(currentText); } catch { currentData = currentText; }
 
-            const priceText = await priceRes.text();
-            let priceData;
-            try {
-              priceData = JSON.parse(priceText);
-            } catch {
-              priceData = priceText;
-            }
+            const newSalePrice = parseFloat(row.salePrice);
+            const newRegularPrice = parseFloat(row.basePrice || 0);
 
-            console.log(`⬅️ Sale Price Response (NetSuite):`, priceData);
+            if (currentData.price !== newSalePrice) {
+              const patchBody = { price: newSalePrice };
 
-            rowResult.response.netsuite = priceData;
-            rowResult.status = "Success";
-          } else {
-            console.log(`⚠️ Skipping ${row.name}, Sale Price already ${newSalePrice}`);
-            rowResult.response.netsuite = { skipped: true, reason: "Already correct" };
-            rowResult.status = "Skipped";
-          }
+              console.log(`➡️ [NetSuite] PATCH ${selfLink}`);
+              console.log("   Payload:", JSON.stringify(patchBody));
 
-          // --- 🔄 Sync to WooCommerce ---
-          try {
-            const wooApi = getWooApi(environment);
+              const priceRes = await fetch(selfLink, {
+                method: "PATCH",
+                headers: { ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
+                body: JSON.stringify(patchBody),
+              });
 
-            if (row.wooId) {
-              // Fetch Woo product to check if it's a variation
-              const { data: product } = await wooApi.get(`products/${row.wooId}`);
+              const priceText = await priceRes.text();
+              let priceData; try { priceData = JSON.parse(priceText); } catch { priceData = priceText; }
 
-              if (product.parent_id && product.parent_id !== 0) {
-                // Variation
-                await wooApi.put(`products/${product.parent_id}/variations/${product.id}`, {
-                  regular_price: newRegularPrice.toFixed(2),
-                  sale_price: newSalePrice.toFixed(2),
-                });
-
-                console.log(
-                  `✅ WooCommerce updated Variation ${product.id} (Parent ${product.parent_id}): regular_price ${newRegularPrice}, sale_price ${newSalePrice}`
-                );
-                rowResult.response.woocommerce = {
-                  success: true,
-                  wooId: product.id,
-                  parentId: product.parent_id,
-                  newRegularPrice,
-                  newSalePrice,
-                };
-              } else {
-                // Simple product
-                await wooApi.put(`products/${product.id}`, {
-                  regular_price: newRegularPrice.toFixed(2),
-                  sale_price: newSalePrice.toFixed(2),
-                });
-
-                console.log(
-                  `✅ WooCommerce updated Product ${product.id}: regular_price ${newRegularPrice}, sale_price ${newSalePrice}`
-                );
-                rowResult.response.woocommerce = {
-                  success: true,
-                  wooId: product.id,
-                  newRegularPrice,
-                  newSalePrice,
-                };
-              }
+              console.log("⬅️ [NetSuite] Response:", priceData);
+              rowResult.response.netsuite = priceData;
+              rowResult.status = "Success";
             } else {
-              console.warn(`⚠️ No Woo Id for product ${row.id}`);
-              rowResult.response.woocommerce = { skipped: true, reason: "Missing Woo Id" };
+              rowResult.response.netsuite = { skipped: true, reason: "Already correct" };
+              rowResult.status = "Skipped";
             }
-          } catch (wooErr) {
-            console.error(
-              `❌ WooCommerce update failed for Woo Id ${row.wooId || row.id}:`,
-              wooErr.message
-            );
-            rowResult.response.woocommerce = { error: wooErr.message };
+
+            // 🔄 WooCommerce sync
+            try {
+              const wooApi = getWooApi(environment);
+              if (row.wooId) {
+                const { data: product } = await wooApi.get(`products/${row.wooId}`);
+                const updatePayload = { regular_price: newRegularPrice.toFixed(2), sale_price: newSalePrice.toFixed(2) };
+
+                let wooResponse;
+                if (product.parent_id && product.parent_id !== 0) {
+                  wooResponse = await wooApi.put(`products/${product.parent_id}/variations/${product.id}`, updatePayload);
+                } else {
+                  wooResponse = await wooApi.put(`products/${product.id}`, updatePayload);
+                }
+
+                console.log("⬅️ [WooCommerce] Response:", wooResponse.data);
+                rowResult.response.woocommerce = { success: true, ...wooResponse.data };
+              } else {
+                rowResult.response.woocommerce = { skipped: true, reason: "Missing Woo Id" };
+              }
+            } catch (wooErr) {
+              rowResult.response.woocommerce = { error: wooErr.message };
+              console.error("❌ WooCommerce update failed:", wooErr.message);
+            }
           }
+        } else {
+          rowResult.status = "Error";
+          rowResult.response.netsuite = { error: "Unexpected GET response", data: priceGetData };
         }
+      } catch (err) {
+        rowResult.status = "Error";
+        rowResult.response = { error: String(err) };
+        console.error("❌ Promotion push exception:", err);
       }
-    } else {
-      rowResult.status = "Error";
-      rowResult.response.netsuite = { error: "Unexpected GET response", data: priceGetData };
+
+      results.push(rowResult);
+      job.processed++;
+      continue;
     }
-  } catch (err) {
-    console.error(`❌ Error updating Sale Price for ${row.name}:`, err);
-    rowResult.status = "Error";
-    rowResult.response = { error: String(err) };
-  }
-
-  results.push(rowResult);
-  job.processed++;
-  continue;
-}
-
-
 
     // --- Default ProductData jobs ---
-    const rowResult = {
-      itemId: row["Item ID"],
-      status: "Pending",
-      response: { main: null, prices: [], images: [], error: null },
-    };
+    const rowResult = { itemId: row["Item ID"], status: "Pending", response: { main: null, prices: [], images: [], error: null } };
 
     try {
       if (!row["Internal ID"]) {
@@ -1025,7 +982,6 @@ if (type === "promotion-push") {
         continue;
       }
 
-      // Build payload
       const payload = {};
       let basePriceVal;
 
@@ -1038,17 +994,55 @@ if (type === "promotion-push") {
 
         if (field.fieldType === "multiple-select") {
           const ids = row[`${field.name}_InternalId`];
-          if (Array.isArray(ids)) {
-            payload[field.internalid] = { items: ids.map((id) => ({ id: String(id) })) };
+          if (Array.isArray(ids)) payload[field.internalid] = { items: ids.map((id) => ({ id: String(id) })) };
+          continue;
+        }
+
+        if (field.name === "Preferred Supplier") {
+          const newVendorId = row[`${field.name}_InternalId`] ?? null;
+          if (newVendorId) {
+            try {
+              const vendorUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/itemVendor`;
+              const { tokenId, tokenSecret } = user;
+
+              const vendorRes = await fetch(vendorUrl, {
+                method: "GET",
+                headers: { ...getAuthHeader(vendorUrl, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
+              });
+
+              const vendorText = await vendorRes.text();
+              let vendorData; try { vendorData = JSON.parse(vendorText); } catch { vendorData = vendorText; }
+
+              if (Array.isArray(vendorData?.items) && vendorData.items.length > 0) {
+                const lastLine = vendorData.items[vendorData.items.length - 1];
+                const selfLink = lastLine.links?.find(l => l.rel === "self")?.href;
+                if (selfLink) {
+                  const patchBody = { vendor: { id: String(newVendorId) }, subsidiary: { id: "6" }, preferred: true, currency: { id: "1" } };
+
+                  console.log(`➡️ [NetSuite] PATCH Preferred Supplier ${selfLink}`);
+                  console.log("   Payload:", JSON.stringify(patchBody));
+
+                  const patchRes = await fetch(selfLink, {
+                    method: "PATCH",
+                    headers: { ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
+                    body: JSON.stringify(patchBody),
+                  });
+
+                  const patchText = await patchRes.text();
+                  let patchData; try { patchData = JSON.parse(patchText); } catch { patchData = patchText; }
+                  console.log("⬅️ [NetSuite] Response:", patchData);
+                }
+              }
+            } catch (err) {
+              console.error("❌ Preferred Supplier update failed:", err);
+            }
           }
           continue;
         }
 
         if (field.fieldType === "List/Record") {
           const internalId = row[`${field.name}_InternalId`] ?? null;
-          if (internalId !== null && internalId !== "") {
-            payload[field.internalid] = { id: String(internalId) };
-          }
+          if (internalId !== null && internalId !== "") payload[field.internalid] = { id: String(internalId) };
           continue;
         }
 
@@ -1057,24 +1051,12 @@ if (type === "promotion-push") {
           if (fileId && String(fileId).trim() !== "") {
             const suiteletUrl = getImageEndpoint(environment);
             const url = `${suiteletUrl}&itemid=${row["Internal ID"]}&fileid=${fileId}&fieldid=${field.internalid}`;
-
-            console.log(`🖼️ Calling Suitelet for image field ${field.internalid}`);
-            console.log("➡️ Suitelet URL:", url);
-
             try {
               const res = await fetch(url, { method: "GET" });
               const text = await res.text();
-              let data;
-              try {
-                data = JSON.parse(text);
-              } catch {
-                data = text;
-              }
-              console.log("⬅️ Suitelet response:", data);
-
+              let data; try { data = JSON.parse(text); } catch { data = text; }
               rowResult.response.images.push({ field: field.internalid, result: data });
             } catch (err) {
-              console.error("❌ Suitelet call failed:", err);
               rowResult.response.images.push({ field: field.internalid, error: String(err) });
             }
           }
@@ -1082,141 +1064,89 @@ if (type === "promotion-push") {
         }
 
         const value = row[field.name];
-        const isEmpty =
-          value === undefined ||
-          value === null ||
-          (typeof value === "string" && value.trim() === "");
-        if (isEmpty) continue;
-
-        if (field.fieldType === "Currency") {
-          payload[field.internalid] = parseFloat(value) || 0;
-        } else if (field.fieldType === "Checkbox") {
-          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
-          payload[field.internalid] =
-            v === true || v === 1 || v === "true" || v === "t" || v === "1" || v === "y" || v === "yes";
-        } else {
-          payload[field.internalid] = String(value);
+        if (value !== undefined && value !== null && !(typeof value === "string" && value.trim() === "")) {
+          if (field.fieldType === "Currency") {
+            payload[field.internalid] = parseFloat(value) || 0;
+          } else if (field.fieldType === "Checkbox") {
+            const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
+            payload[field.internalid] = v === true || v === 1 || ["true", "t", "1", "y", "yes"].includes(v);
+          } else {
+            payload[field.internalid] = String(value);
+          }
         }
       }
-
-      console.log("🧩 Payload keys (non-image):", Object.keys(payload));
 
       const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
       const { tokenId, tokenSecret } = user;
 
       if (Object.keys(payload).length > 0) {
-        console.log(`\n➡️ [${environment}] PATCH ${url}`);
-        console.log("🔑 Payload:\n", JSON.stringify(payload, null, 2));
+        console.log(`➡️ [NetSuite] PATCH ${url}`);
+        console.log("   Payload:", JSON.stringify(payload));
 
         const response = await fetch(url, {
           method: "PATCH",
-          headers: {
-            ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig),
-            "Content-Type": "application/json",
-            Prefer: "return=representation",
-          },
+          headers: { ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
           body: JSON.stringify(payload),
         });
 
         const text = await response.text();
-        try {
-          rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" };
-        } catch {
-          rowResult.response.main = text || { status: "No Content (204)" };
-        }
-        console.log(`⬅️ [${environment}] Response:`, rowResult.response.main);
+        try { rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" }; }
+        catch { rowResult.response.main = text || { status: "No Content (204)" }; }
+
+        console.log("⬅️ [NetSuite] Response:", rowResult.response.main);
       }
 
       // Handle Base Price update
       if (basePriceVal !== undefined) {
         const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
-
-        console.log(`\n➡️ [${environment}] GET ${priceUrl}`);
         const priceGetRes = await fetch(priceUrl, {
           method: "GET",
-          headers: {
-            ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
-            "Content-Type": "application/json",
-          },
+          headers: { ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
         });
 
         const priceGetText = await priceGetRes.text();
-        let priceGetData;
-        try {
-          priceGetData = JSON.parse(priceGetText);
-        } catch {
-          priceGetData = priceGetText;
-        }
+        let priceGetData; try { priceGetData = JSON.parse(priceGetText); } catch { priceGetData = priceGetText; }
 
         if (Array.isArray(priceGetData?.items)) {
           for (const item of priceGetData.items) {
             const selfLink = item.links?.find((l) => l.rel === "self")?.href;
-            if (!selfLink) continue;
+            if (!selfLink || !selfLink.includes("pricelevel=1")) continue;
 
-            if (selfLink.includes("pricelevel=1")) {
-              const currentRes = await fetch(selfLink, {
-                method: "GET",
-                headers: {
-                  ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
-                  "Content-Type": "application/json",
-                },
+            const currentRes = await fetch(selfLink, {
+              method: "GET",
+              headers: { ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
+            });
+
+            const currentText = await currentRes.text();
+            let currentData; try { currentData = JSON.parse(currentText); } catch { currentData = currentText; }
+
+            if (currentData.price !== basePriceVal) {
+              const patchBody = { price: basePriceVal };
+
+              console.log(`➡️ [NetSuite] PATCH Base Price ${selfLink}`);
+              console.log("   Payload:", JSON.stringify(patchBody));
+
+              const priceRes = await fetch(selfLink, {
+                method: "PATCH",
+                headers: { ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
+                body: JSON.stringify(patchBody),
               });
 
-              const currentText = await currentRes.text();
-              let currentData;
-              try {
-                currentData = JSON.parse(currentText);
-              } catch {
-                currentData = currentText;
-              }
+              const priceText = await priceRes.text();
+              let priceData; try { priceData = JSON.parse(priceText); } catch { priceData = priceText; }
+              console.log("⬅️ [NetSuite] Response:", priceData);
 
-              if (currentData.price !== basePriceVal) {
-                const patchBody = { price: basePriceVal };
-
-                console.log(`\n➡️ [${environment}] PATCH ${selfLink}`);
-                console.log("🔑 Price Row Payload:\n", JSON.stringify(patchBody, null, 2));
-
-                const priceRes = await fetch(selfLink, {
-                  method: "PATCH",
-                  headers: {
-                    ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
-                    "Content-Type": "application/json",
-                    Prefer: "return=representation",
-                  },
-                  body: JSON.stringify(patchBody),
-                });
-
-                const priceText = await priceRes.text();
-                let priceData;
-                try {
-                  priceData = JSON.parse(priceText);
-                } catch {
-                  priceData = priceText;
-                }
-
-                console.log(`⬅️ Price Response:`, priceData);
-
-                rowResult.response.prices.push({ link: selfLink, newValue: basePriceVal, result: priceData });
-              } else {
-                console.log(`⚠️ Skipping ${selfLink}, already at ${basePriceVal}`);
-              }
+              rowResult.response.prices.push({ link: selfLink, newValue: basePriceVal, result: priceData });
             }
           }
-        } else {
-          console.warn("⚠️ Price GET did not return expected `items` array");
-          rowResult.response.prices.push({ error: "Unexpected GET response", data: priceGetData });
         }
       }
 
-      rowResult.status =
-        rowResult.response.error ||
-          (rowResult.response.main && rowResult.response.main.error)
-          ? "Error"
-          : "Success";
+      rowResult.status = rowResult.response.error || (rowResult.response.main && rowResult.response.main.error) ? "Error" : "Success";
     } catch (err) {
       rowResult.status = "Error";
       rowResult.response.error = String(err);
-      console.error(`❌ Exception for item ${row["Item ID"]}:`, err);
+      console.error("❌ ProductData exception:", err);
     }
 
     results.push(rowResult);
@@ -1227,10 +1157,19 @@ if (type === "promotion-push") {
   job.status = "completed";
   job.finishedAt = new Date();
   jobQueue.shift();
+
+  // ✅ Final Summary
+  const successCount = results.filter(r => r.status === "Success").length;
+  const errorCount = results.filter(r => r.status === "Error").length;
+  const skippedCount = results.filter(r => r.status === "Skipped").length;
+
+  console.log(`\n📊 Job Summary: ✅ ${successCount} | ❌ ${errorCount} | ⚠️ ${skippedCount}\n`);
+
   runNextJob();
 }
 
-// enqueue job with the current env
+
+
 // enqueue job with the current env
 app.post("/push-updates", authMiddleware, (req, res) => {
   const rowsToPush = req.body.rows;

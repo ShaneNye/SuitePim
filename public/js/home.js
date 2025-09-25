@@ -89,12 +89,10 @@ function closeIssueModal() {
   if (modal) {
     modal.classList.remove("open");
     modal.style.display = "none";
-    console.log("🔒 Modal closed");
   }
 }
 
 function openIssueModal(issue) {
-  console.log("🔍 Opening modal for issue:", issue.number, issue.title);
 
   const titleEl = document.getElementById("modal-title");
   const reporterEl = document.getElementById("modal-reporter");
@@ -170,7 +168,6 @@ function openIssueModal(issue) {
         commentsContainer.innerHTML += `<p>⚠️ GitHub Error: ${
           comments.message || "Unknown error"
         }</p>`;
-        console.error(`⚠️ GitHub comments API error for #${issue.number}:`, comments);
       }
     })
     .catch((err) => {
@@ -279,7 +276,6 @@ function addReplyUI(issue, commentsContainer, userAlignments, availableAlignment
     const body = replyBox.value.trim();
     if (!body) return;
 
-    console.log(`✉️ Posting reply to #${issue.number}:`, body);
 
     try {
       const res = await fetch(`/issues/${issue.number}/comment`, {
@@ -290,7 +286,6 @@ function addReplyUI(issue, commentsContainer, userAlignments, availableAlignment
       const result = await res.json();
 
       if (res.ok && result.success) {
-        console.log(`✅ Reply posted on #${issue.number}:`, result.comment);
 
         // Always insert before reply box
         renderComment(

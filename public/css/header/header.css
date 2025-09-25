@@ -1,9 +1,12 @@
 @font-face {
   font-family: 'ProximaNova';
-  src: url('../fonts/proximanova_regular.ttf') format('truetype');
+  src: url('/fonts/proximanova_regular.ttf') format('truetype'),
+       url('/fonts/proximanova_regular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
 }
+
+
 
 
 * {

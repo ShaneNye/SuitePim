@@ -43,6 +43,7 @@ async function getListOptions(field) {
   }
 }
 
+
 // --- LOAD DATA ---
 async function loadJSONData() {
   const container = document.getElementById("table-data");
@@ -63,44 +64,9 @@ async function loadJSONData() {
 
     fullData = await response.json();
 
-    // ✅ Normalize multiple-select fields to arrays (names + IDs)
-    fullData = fullData.map(row => {
-      fieldMap.forEach(f => {
-        if (f.fieldType === "multiple-select") {
-          const val = row[f.name];
-
-          // Normalize names
-          if (typeof val === "string") {
-            row[f.name] = val.split(",").map(s => s.trim()).filter(Boolean);
-          } else if (!Array.isArray(val)) {
-            row[f.name] = [];
-          }
-
-          // Normalize IDs
-          if (!Array.isArray(row[`${f.name}_InternalId`])) {
-            row[`${f.name}_InternalId`] = [];
-          }
-        }
-      });
-      return row;
-    });
-
-    // Apply tool columns
-    if (typeof window.addRetailPriceTool === "function")
-      fullData = window.addRetailPriceTool(fullData);
-
-    filteredData = [...fullData];
-    baselineData = JSON.parse(JSON.stringify(fullData));
-
-    const columns = Object.keys(fullData[0] || {});
-    displayedColumns = [
-      ...columns.slice(0, 7),
-      ...toolColumns.filter((tc) => !columns.slice(0, 7).includes(tc)),
-    ];
-
-    // --- 2) Preload all List/Record feeds
+    // --- 2) Preload all List/Record + multiple-select feeds first
     const preloadPromises = fieldMap
-      .filter((f) => f.fieldType === "List/Record" && f.jsonFeed)
+      .filter((f) => (f.fieldType === "List/Record" || f.fieldType === "multiple-select") && f.jsonFeed)
       .map(async (f) => {
         try {
           const res = await fetch(f.jsonFeed);
@@ -115,7 +81,55 @@ async function loadJSONData() {
 
     await Promise.all(preloadPromises);
 
-    // --- 3) Build panels (hidden until table is ready)
+    // --- 3) Normalize multiple-select fields to arrays (names + IDs)
+    fullData = fullData.map(row => {
+      fieldMap.forEach(f => {
+        if (f.fieldType === "multiple-select") {
+          const val = row[f.name];
+
+          // Normalize names
+          if (typeof val === "string") {
+            row[f.name] = val.split(",").map(s => s.trim()).filter(Boolean);
+          } else if (!Array.isArray(val)) {
+            row[f.name] = [];
+          }
+
+          // 🔑 Always rebuild IDs fresh from names
+          const opts = listCache[f.name] || [];
+          row[`${f.name}_InternalId`] = row[f.name].map(name => {
+            const match = opts.find(o =>
+              (o["Name"] || o.name || "").toLowerCase() === name.toLowerCase()
+            );
+            return match ? String(match["Internal ID"] || match.id) : null;
+          }).filter(Boolean);
+
+          // Debug: log mismatches
+          if (row[f.name].length !== row[`${f.name}_InternalId`].length) {
+            console.warn(`[LOAD][${f.name}] Some names could not be mapped to IDs`, {
+              names: row[f.name],
+              ids: row[`${f.name}_InternalId`]
+            });
+          }
+        }
+      });
+      return row;
+    });
+
+
+    // Apply tool columns
+    if (typeof window.addRetailPriceTool === "function")
+      fullData = window.addRetailPriceTool(fullData);
+
+    filteredData = [...fullData];
+    baselineData = JSON.parse(JSON.stringify(fullData));
+
+    const columns = Object.keys(fullData[0] || {});
+    displayedColumns = [
+      ...columns.slice(0, 7),
+      ...toolColumns.filter((tc) => !columns.slice(0, 7).includes(tc)),
+    ];
+
+    // --- 4) Build panels (hidden until table is ready)
     const panelsParent = document.createElement("div");
     panelsParent.classList.add("panel-parent", "is-hidden");
     container.appendChild(panelsParent);
@@ -125,7 +139,7 @@ async function loadJSONData() {
     renderBulkActionPanel(columns, panelsParent);
     renderPushButton(panelsParent);
 
-    // --- 4) Build table
+    // --- 5) Build table
     await displayJSONTable(filteredData);
 
     // Reveal panels
@@ -150,6 +164,9 @@ async function loadJSONData() {
     spinnerMsg.textContent = "❌ Failed to load JSON data.";
   }
 }
+
+
+
 
 
 // --- FILTER PANEL (table-style with dynamic rows + remove buttons) ---
@@ -670,6 +687,45 @@ function renderBulkActionPanel(columns, parent) {
       // Load options for modal
       bulkOptionsCache = await getListOptions(field);
 
+      // --- helpers for robust matching & ID rebuild ---
+      const normalizeName = (str) =>
+        (str || "")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, " ")
+          .trim();
+
+      const stripPrefix = (str) => {
+        // turn "Parent : Child" -> "Child"
+        const parts = String(str || "").split(":");
+        return parts.length > 1 ? parts[parts.length - 1].trim() : String(str || "");
+      };
+
+      const candidatesFor = (label) => {
+        // e.g. "Tension : 3 - Medium Firm" ->
+        // ["tension 3 medium firm", "3 medium firm"]
+        const full = normalizeName(label);
+        const child = normalizeName(stripPrefix(label));
+        return child && child !== full ? [full, child] : [full];
+      };
+
+      const idForName = (name) => {
+        const norm = normalizeName(name);
+        const match = bulkOptionsCache.find(
+          (o) =>
+            normalizeName(o["Name"] || o.name) === norm ||
+            normalizeName(stripPrefix(o["Name"] || o.name)) === norm
+        );
+        return match ? String(match["Internal ID"] || match.id) : null;
+      };
+
+      const rebuildIdsFromNames = (namesArr) => {
+        const idsArr = (namesArr || [])
+          .map((nm) => idForName(nm))
+          .filter(Boolean)
+          .map(String);
+        return idsArr;
+      };
+
       const openBulkModal = () => {
         bulkModal.classList.remove("hidden");
         bulkTitle.textContent = `Choose values for ${col}`;
@@ -684,10 +740,10 @@ function renderBulkActionPanel(columns, parent) {
           );
 
           // Selected first
-          const selectedSet = new Set(bulkSelectedIds);
+          const selectedSet = new Set(bulkSelectedIds.map(String));
           const ordered = [
-            ...filtered.filter(o => selectedSet.has(o["Internal ID"] || o.id)),
-            ...filtered.filter(o => !selectedSet.has(o["Internal ID"] || o.id)),
+            ...filtered.filter(o => selectedSet.has(String(o["Internal ID"] || o.id))),
+            ...filtered.filter(o => !selectedSet.has(String(o["Internal ID"] || o.id))),
           ];
 
           ordered.forEach(opt => {
@@ -715,6 +771,7 @@ function renderBulkActionPanel(columns, parent) {
                   bulkSelectedNames.splice(i, 1);
                 }
               }
+              console.log(`[BULK][${col}] Modal tick`, { id, name, nowSelectedIds: [...bulkSelectedIds] });
             });
 
             label.appendChild(cb);
@@ -727,6 +784,10 @@ function renderBulkActionPanel(columns, parent) {
         bulkSearch.oninput = () => renderBulkList(bulkSearch.value);
 
         bulkSave.onclick = () => {
+          console.log(`[BULK][${col}] Modal Save`, {
+            bulkSelectedIds: bulkSelectedIds.map(String),
+            bulkSelectedNames: [...bulkSelectedNames]
+          });
           preview.textContent = bulkSelectedNames.length
             ? `${bulkSelectedNames.join(", ")}`
             : "(no values chosen)";
@@ -734,6 +795,7 @@ function renderBulkActionPanel(columns, parent) {
         };
 
         bulkCancel.onclick = () => {
+          console.log(`[BULK][${col}] Modal Cancel`);
           bulkModal.classList.add("hidden");
         };
       };
@@ -742,14 +804,22 @@ function renderBulkActionPanel(columns, parent) {
         // start clean each time user changes column
         bulkSelectedIds = [];
         bulkSelectedNames = [];
+        console.log(`[BULK][${col}] Open chooser (reset selections)`);
         openBulkModal();
       };
 
       // Apply bulk action
       applyBtn.onclick = () => {
         const mode = actionSelect.value; // Replace / Append / Remove
+        console.log(`[BULK][${col}] Apply clicked`, {
+          mode,
+          bulkSelectedIds: bulkSelectedIds.map(String),
+          bulkSelectedNames: [...bulkSelectedNames]
+        });
+
         if (!bulkSelectedIds || bulkSelectedIds.length === 0) {
           alert("Choose one or more values first.");
+          console.warn(`[BULK][${col}] No values chosen for apply`);
           return;
         }
 
@@ -769,41 +839,90 @@ function renderBulkActionPanel(columns, parent) {
 
         checkedRowIndices.forEach((rowIndex) => {
           let ids = Array.isArray(filteredData[rowIndex][`${col}_InternalId`])
-            ? [...filteredData[rowIndex][`${col}_InternalId`]]
+            ? [...filteredData[rowIndex][`${col}_InternalId`].map(String)]
             : [];
           let names = Array.isArray(filteredData[rowIndex][col])
             ? [...filteredData[rowIndex][col]]
             : [];
 
+          console.group(`[BULK][${col}] Row ${rowIndex} BEFORE`);
+          console.log("ids:", ids);
+          console.log("names:", names);
+          console.groupEnd();
+
           if (mode === "Replace") {
-            ids = [...bulkSelectedIds];
+            ids = bulkSelectedIds.map(String);
             names = [...bulkSelectedNames];
+            console.log(`[BULK][${col}] Row ${rowIndex} mode=Replace`, { ids, names });
+
           } else if (mode === "Append") {
             bulkSelectedIds.forEach((id, idx) => {
-              if (!ids.includes(id)) {
-                ids.push(id);
-                names.push(bulkSelectedNames[idx]);
+              const strId = String(id);
+              const nameToAdd = bulkSelectedNames[idx];
+              // avoid dup by name or id
+              const alreadyHasId = ids.includes(strId);
+              const alreadyHasName = names.some(n => normalizeName(n) === normalizeName(nameToAdd) || normalizeName(n) === normalizeName(stripPrefix(nameToAdd)));
+              if (!alreadyHasId && !alreadyHasName) {
+                ids.push(strId);
+                names.push(nameToAdd);
+                console.log(`[BULK][${col}] Row ${rowIndex} append`, { addedId: strId, addedName: nameToAdd });
+              } else {
+                console.log(`[BULK][${col}] Row ${rowIndex} append skipped (duplicate)`, { id: strId, name: nameToAdd });
               }
             });
+
           } else if (mode === "Remove") {
+            // Build a set of normalized targets (full + child) for each chosen option
+            const targetNorms = new Set();
+            bulkSelectedNames.forEach((optName) => {
+              candidatesFor(optName).forEach((c) => targetNorms.add(c));
+            });
+
+            // First try ID removals (where present)
             bulkSelectedIds.forEach((id) => {
-              const i = ids.indexOf(id);
-              if (i > -1) {
-                ids.splice(i, 1);
-                names.splice(i, 1);
+              const strId = String(id);
+              const idIdx = ids.findIndex(existingId => String(existingId) === strId);
+              if (idIdx > -1) {
+                ids.splice(idIdx, 1);
+                console.log(`[BULK][${col}] Row ${rowIndex} removed by ID`, strId);
               }
             });
+
+            // Then remove by normalized name, tolerant to prefixes/punctuation
+            const nameNorms = names.map((n) => normalizeName(n));
+            for (let i = names.length - 1; i >= 0; i--) {
+              const nFull = nameNorms[i];
+              const nChild = normalizeName(stripPrefix(names[i]));
+              if (targetNorms.has(nFull) || targetNorms.has(nChild)) {
+                console.log(`[BULK][${col}] Row ${rowIndex} removed by Name`, names[i]);
+                names.splice(i, 1);
+                // Do NOT splice ids by index (they may be misaligned). We'll rebuild IDs next.
+              }
+            }
+
+            // After any removals, rebuild IDs from remaining names so arrays are aligned
+            const rebuilt = rebuildIdsFromNames(names);
+            console.log(`[BULK][${col}] Row ${rowIndex} rebuilt IDs from names`, rebuilt);
+            ids = rebuilt;
           }
+
+          console.group(`[BULK][${col}] Row ${rowIndex} AFTER`);
+          console.log("ids:", ids);
+          console.log("names:", names);
+          console.groupEnd();
 
           filteredData[rowIndex][`${col}_InternalId`] = ids;
           filteredData[rowIndex][col] = names;
         });
 
+        console.log(`[BULK][${col}] Re-render table after apply`);
         displayJSONTable(filteredData).then(() => restoreSelections(checkedRowIndices, allChecked));
       };
 
       return;
     }
+
+
 
     // Default (numeric / text / list single-select) branch
     actionSelect.innerHTML = "";
@@ -1744,39 +1863,47 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
 
               const options = optionsByFieldName[field.name] || [];
 
-              let selectedIds = [];
-              if (Array.isArray(rowData[`${col}_InternalId`])) {
-                selectedIds = rowData[`${col}_InternalId`];
-              } else {
-                const namesArray = Array.isArray(rowData[col])
-                  ? rowData[col]
-                  : (typeof rowData[col] === "string"
-                    ? rowData[col].split(",").map(s => s.trim()).filter(Boolean)
-                    : []);
-                selectedIds = namesArray
-                  .map(name => {
-                    const lowerName = name.toLowerCase();
-                    let match = options.find(o => (o["Name"] || o.name) === name);
-                    if (!match) match = options.find(o => (o["Name"] || o.name || "").toLowerCase() === lowerName);
-                    if (!match) match = options.find(o => (o["Name"] || o.name || "").toLowerCase().includes(lowerName));
-                    return match ? (match["Internal ID"] || match.id) : null;
-                  })
-                  .filter(Boolean);
-              }
+              // ✅ Normalized selected IDs as strings
+              const selectedIds = Array.isArray(rowData[`${col}_InternalId`])
+                ? rowData[`${col}_InternalId`].map(id => String(id))
+                : [];
 
+              // 🔎 Debug log
+              console.log(`🔎 Opening modal for "${col}"`);
+              console.log("RowData selectedIds:", selectedIds);
+              console.log("RowData names:", rowData[col]);
+              console.log("Options feed:", options.map(o => ({
+                id: String(o["Internal ID"] || o.id),
+                name: o["Name"] || o.name
+              })));
+
+              // Sort so selected options appear first
               const sortedOptions = [
-                ...options.filter(o => selectedIds.includes(o["Internal ID"] || o.id)),
-                ...options.filter(o => !selectedIds.includes(o["Internal ID"] || o.id))
+                ...options.filter(o =>
+                  selectedIds.includes(String(o["Internal ID"] || o.id))
+                ),
+                ...options.filter(o =>
+                  !selectedIds.includes(String(o["Internal ID"] || o.id))
+                )
               ];
 
               sortedOptions.forEach((opt) => {
                 const label = document.createElement("label");
                 label.style.display = "flex";
                 label.style.alignItems = "center";
+
                 const cb = document.createElement("input");
                 cb.type = "checkbox";
-                cb.value = opt["Internal ID"] || opt.id;
-                if (selectedIds.includes(cb.value)) cb.checked = true;
+
+                const optId = String(opt["Internal ID"] || opt.id);
+                cb.value = optId;
+                cb.checked = selectedIds.includes(optId);
+
+                // 🔎 Debug each option render
+                if (cb.checked) {
+                  console.log(`✅ Pre-checked: ${optId} (${opt["Name"] || opt.name})`);
+                }
+
                 label.appendChild(cb);
                 label.appendChild(document.createTextNode(" " + (opt["Name"] || opt.name)));
                 modalOptions.appendChild(label);
@@ -1794,11 +1921,15 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
 
               modalSave.onclick = () => {
                 const checked = [...modalOptions.querySelectorAll("input:checked")];
-                const ids = checked.map(c => c.value);
+                const ids = checked.map(c => String(c.value));
                 const names = checked.map(c => {
-                  const opt = options.find(o => (o["Internal ID"] || o.id) === c.value);
+                  const opt = options.find(o =>
+                    String(o["Internal ID"] || o.id) === String(c.value)
+                  );
                   return opt ? (opt["Name"] || opt.name) : "";
                 });
+
+                console.log("💾 Saving selection", { ids, names });
 
                 rowData[col] = names;
                 rowData[`${col}_InternalId`] = ids;
@@ -1817,6 +1948,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
             td.appendChild(editBtn);
           }
         }
+
 
         // --- CHECKBOX FIELD ---
         else if (field && field.fieldType === "Checkbox") {
