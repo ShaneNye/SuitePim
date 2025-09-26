@@ -599,6 +599,167 @@ function renderBulkActionPanel(columns, parent) {
     valueSearch.style.display = "none";
     valueSelect.style.display = "none";
 
+    // Free-Form Text special case
+    if (field && field.fieldType === "Free-Form Text") {
+      valueInput.type = "text"; // normal text input
+      valueInput.value = "";
+      valueInput.placeholder = "Enter text value";
+
+      valueInput.style.display = "inline-block";
+      actionSelect.style.display = "none";   // hide Add By Value / Percent
+      valueSelect.style.display = "none";
+      valueSearch.style.display = "none";
+
+      applyBtn.onclick = () => {
+        applyBulkAction(col, valueInput.value, "Set To");
+      };
+      return;
+    }
+
+    //  List/Record fields
+    if (field && field.fieldType === "List/Record") {
+      valueInput.style.display = "none";
+      actionSelect.style.display = "none";
+      valueSearch.style.display = "none";
+      valueSelect.style.display = "inline-block";
+
+      // Load options from JSON feed
+      const options = await getListOptions(field);
+      valueSelect.innerHTML = "";
+      options.forEach((opt) => {
+        const option = document.createElement("option");
+        option.value = String(opt["Internal ID"] || opt.id);
+        option.textContent = opt["Name"] || opt.name;
+        valueSelect.appendChild(option);
+      });
+
+      applyBtn.onclick = () => {
+        const selectedId = valueSelect.value;
+        const selected = options.find(
+          (o) => String(o["Internal ID"] || o.id) === selectedId
+        );
+        if (!selected) return;
+
+        applyBulkAction(
+          col,
+          selectedId,            // send ID for backend
+          "Set List Value"       // custom flag
+        );
+      };
+      return;
+    }
+
+    // 🔹 Rich-Text fields
+    if (field && field.fieldType === "rich-text") {
+      // Hide other controls
+      valueInput.style.display = "none";
+      actionSelect.style.display = "none";
+      valueSearch.style.display = "none";
+      valueSelect.style.display = "none";
+
+      // Add a button to launch the editor
+      const openBtn = document.createElement("button");
+      openBtn.textContent = "Open Editor…";
+      openBtn.style.marginLeft = "8px";
+
+      let bulkHtml = ""; // store chosen HTML
+
+      openBtn.addEventListener("click", () => {
+        // Reuse the same rich-text modal already in your table
+        let overlay = document.getElementById("rich-text-overlay");
+        let modal = document.getElementById("rich-text-modal");
+
+        if (!overlay || !modal) {
+          alert("Rich-text modal not found. Open a rich-text cell once to initialise it.");
+          return;
+        }
+
+        // Seed modal with bulkHtml (empty if none yet)
+        const modalTextarea = modal.querySelector("#rich-modal-textarea");
+        const modalPreview = modal.querySelector("#rich-modal-preview");
+        if (modalTextarea && modalPreview) {
+          modalTextarea.value = bulkHtml || "";
+          modalPreview.innerHTML = bulkHtml || "<em>(empty)</em>";
+        }
+
+        // Show modal
+        overlay.style.display = "block";
+        modal.style.display = "flex";
+
+        // Hook Save button just for bulk
+        const modalSave = modal.querySelector("#rich-modal-save");
+        const modalCancel = modal.querySelector("#rich-modal-cancel");
+
+        const saveHandler = () => {
+          // capture latest editor value
+          bulkHtml = modalTextarea.style.display === "block"
+            ? modalTextarea.value
+            : modalPreview.innerHTML;
+
+          overlay.style.display = "none";
+          modal.style.display = "none";
+
+          modalSave.removeEventListener("click", saveHandler);
+          if (modalCancel) modalCancel.removeEventListener("click", cancelHandler);
+        };
+
+        const cancelHandler = () => {
+          overlay.style.display = "none";
+          modal.style.display = "none";
+          modalSave.removeEventListener("click", saveHandler);
+          if (modalCancel) modalCancel.removeEventListener("click", cancelHandler);
+        };
+
+        modalSave.addEventListener("click", saveHandler);
+        if (modalCancel) modalCancel.addEventListener("click", cancelHandler);
+      });
+
+      dynamicControls.appendChild(openBtn);
+
+      // Apply button → write bulkHtml to all selected rows
+      applyBtn.onclick = () => {
+        if (!bulkHtml) {
+          alert("Please enter some rich-text content first.");
+          return;
+        }
+
+        const table = document.querySelector("table.csv-table");
+        if (!table) return;
+
+        const checkedRowIndices = new Set();
+        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+        const allChecked = [...allRowCbs].every(cb => cb.checked);
+
+        table.querySelectorAll("tr").forEach((row, index) => {
+          if (index === 0) return;
+          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
+          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+        });
+
+        checkedRowIndices.forEach((rowIndex) => {
+          filteredData[rowIndex][col] = bulkHtml;
+        });
+
+        displayJSONTable(filteredData).then(() => {
+          const newRows = document.querySelectorAll("table.csv-table tr");
+          newRows.forEach((row, index) => {
+            if (index === 0) return;
+            const cb = row.querySelector('td input[type="checkbox"].row-selector');
+            if (cb && checkedRowIndices.has(index - 1)) {
+              cb.checked = true;
+              row.classList.add("selected");
+            }
+          });
+          const selectAll = document.querySelector('input[type="checkbox"].select-all');
+          if (selectAll && allChecked) selectAll.checked = true;
+        });
+      };
+
+      return;
+    }
+
+
+
     // IMAGE fields
     if (field && field.fieldType === "image") {
       valueInput.style.display = "none";
@@ -997,16 +1158,24 @@ function applyBulkAction(column, value, action) {
 
   checkedRowIndices.forEach((rowIndex) => {
     let rowData = { ...filteredData[rowIndex] };
+    const field = fieldMap.find((f) => f.name === column);
 
     if (action === "Set List Value") {
-      // list field handling unchanged
-      const field = fieldMap.find((f) => f.name === column);
+      // List/Record field
       const options = (listCache[field?.name] || []);
       const selected = options.find((o) => o["Internal ID"] === value);
       rowData[column] = selected ? selected["Name"] : "";
       rowData[`${column}_InternalId`] = value;
+
+    } else if (field && field.fieldType === "Free-Form Text") {
+      // ✅ Handle text fields as plain strings
+      if (isSetTo) {
+        rowData[column] = value;
+      }
+      // No "Add By Value/Percent" for text → ignore
+
     } else {
-      // numeric bulk actions
+      // Numeric bulk actions
       const numValue = parseFloat(value);
       if (Number.isNaN(numValue)) return;
 
@@ -1868,40 +2037,57 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
                 ? rowData[`${col}_InternalId`].map(id => String(id))
                 : [];
 
-              // 🔎 Debug log
-              console.log(`🔎 Opening modal for "${col}"`);
-              console.log("RowData selectedIds:", selectedIds);
-              console.log("RowData names:", rowData[col]);
-              console.log("Options feed:", options.map(o => ({
-                id: String(o["Internal ID"] || o.id),
-                name: o["Name"] || o.name
-              })));
+              // ✅ Also collect names from the row (for child-name fallback)
+              const selectedNames = Array.isArray(rowData[col])
+                ? rowData[col].map(n => n.toLowerCase())
+                : [];
 
-              // Sort so selected options appear first
+              // Helper: normalize names
+              const normalizeName = (str) =>
+                (str || "")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, " ")
+                  .trim();
+
+              // Build option list with isChecked flag
+              const allOptionsWithCheck = options.map(opt => {
+                const optId = String(opt["Internal ID"] || opt.id);
+                const optName = opt["Name"] || opt.name || "";
+                const childName = optName.includes(":")
+                  ? optName.split(":").pop().trim()
+                  : optName;
+
+                let isChecked = selectedIds.includes(optId);
+
+                if (!isChecked) {
+                  const normOpt = normalizeName(optName);
+                  const normChild = normalizeName(childName);
+                  isChecked = selectedNames.some(
+                    n => normalizeName(n) === normOpt || normalizeName(n) === normChild
+                  );
+                }
+
+                return { opt, isChecked };
+              });
+
+              // ✅ Sort so checked appear first
               const sortedOptions = [
-                ...options.filter(o =>
-                  selectedIds.includes(String(o["Internal ID"] || o.id))
-                ),
-                ...options.filter(o =>
-                  !selectedIds.includes(String(o["Internal ID"] || o.id))
-                )
+                ...allOptionsWithCheck.filter(o => o.isChecked),
+                ...allOptionsWithCheck.filter(o => !o.isChecked)
               ];
 
-              sortedOptions.forEach((opt) => {
+              sortedOptions.forEach(({ opt, isChecked }) => {
                 const label = document.createElement("label");
                 label.style.display = "flex";
                 label.style.alignItems = "center";
 
                 const cb = document.createElement("input");
                 cb.type = "checkbox";
+                cb.value = String(opt["Internal ID"] || opt.id);
+                cb.checked = isChecked;
 
-                const optId = String(opt["Internal ID"] || opt.id);
-                cb.value = optId;
-                cb.checked = selectedIds.includes(optId);
-
-                // 🔎 Debug each option render
                 if (cb.checked) {
-                  console.log(`✅ Pre-checked: ${optId} (${opt["Name"] || opt.name})`);
+                  console.log(`✅ Pre-checked: ${cb.value} (${opt["Name"] || opt.name})`);
                 }
 
                 label.appendChild(cb);
@@ -1909,7 +2095,9 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
                 modalOptions.appendChild(label);
               });
 
-              modalTitle.textContent = `Edit ${col} (${selectedIds.length} selected)`;
+              // Update title with count of actually checked options
+              const preCheckedCount = modalOptions.querySelectorAll("input:checked").length;
+              modalTitle.textContent = `Edit ${col} (${preCheckedCount} selected)`;
 
               modalSearch.oninput = () => {
                 const term = modalSearch.value.toLowerCase();
@@ -2351,5 +2539,7 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+
 
 window.addEventListener("DOMContentLoaded", loadJSONData);

@@ -3,8 +3,21 @@ console.log("✅ promotionOffers.js loaded");
 
 import { fieldMap } from "./fieldMap.js";
 
-const jsonUrl =
+// promotionOffers.js
+
+// Define both feeds
+const SANDBOXjsonUrl =
   "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4074&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQWUGcZwJHNV7qBCq1DqRIZbQtRBHmXKiGQxDAyKqdmaE";
+
+const PRODjsonUrl =
+  "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4366&deploy=1&compid=7972741&ns-at=AAEJ7tMQqCYeQCBBjwivZ91jpyJ6LIWIv99NNwIbTU33C04dA9g";
+
+// Pick environment (default Sandbox)
+const environment = localStorage.getItem("environment") || "Sandbox";
+
+// Resolve correct feed
+const jsonUrl =
+  environment.toLowerCase() === "production" ? PRODjsonUrl : SANDBOXjsonUrl;
 
 let fullData = [];
 let listCache = {};
@@ -513,9 +526,6 @@ function createRow(section, rowData = null) {
 
 
 
-
-
-
 // --- SETTINGS MODAL ---
 function openSettingsModal(row, badge) {
   let modal = document.getElementById("promo-settings-modal");
@@ -524,7 +534,7 @@ function openSettingsModal(row, badge) {
     modal.id = "promo-settings-modal";
     modal.className = "modal hidden";
     modal.innerHTML = `
-      <div class="modal-content">
+      <div class="modal-content" style="max-width:950px;">
         <h3>Row Filters</h3>
         <table id="filter-table">
           <thead>
@@ -532,18 +542,29 @@ function openSettingsModal(row, badge) {
           </thead>
           <tbody id="filter-tbody"></tbody>
         </table>
-        <button id="add-filter" class="btn">+ Add Filter</button>
-        <div class="modal-actions">
+        <div style="margin-top:8px; display:flex; gap:10px;">
+          <button id="add-filter" class="btn">+ Add Filter</button>
+          <button id="preview-filters" class="btn primary">🔎 Preview</button>
+        </div>
+
+        <!-- Preview panel -->
+        <div id="filter-preview" style="margin-top:15px; padding:10px; border:1px solid #ddd; border-radius:6px; background:#fafafa; max-height:320px; overflow:auto;">
+          <em>⚠️ Click Preview to see matching products.</em>
+        </div>
+
+        <div class="modal-actions" style="margin-top:15px;">
           <button id="settings-cancel" class="btn">Cancel</button>
-          <button id="settings-save" class="btn">Save</button>
+          <button id="settings-save" class="btn primary">Save</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
   }
 
   const tbody = modal.querySelector("#filter-tbody");
+  const preview = modal.querySelector("#filter-preview");
   tbody.innerHTML = "";
 
+  // --- addFilterRow (same as production)
   const addFilterRow = async (prefill = {}) => {
     const tr = document.createElement("tr");
 
@@ -589,6 +610,7 @@ function openSettingsModal(row, badge) {
           select.appendChild(o);
         });
         valueTd.appendChild(select);
+
       } else if (field.fieldType === "multiple-select") {
         const wrapper = document.createElement("div");
         wrapper.style.display = "flex";
@@ -635,6 +657,7 @@ function openSettingsModal(row, badge) {
         wrapper.appendChild(select);
         wrapper.appendChild(modeToggle);
         valueTd.appendChild(wrapper);
+
       } else if (field.fieldType === "Checkbox") {
         const select = document.createElement("select");
         select.className = "text-input";
@@ -645,6 +668,7 @@ function openSettingsModal(row, badge) {
           select.appendChild(o);
         });
         valueTd.appendChild(select);
+
       } else {
         const input = document.createElement("input");
         input.type = "text";
@@ -685,7 +709,123 @@ function openSettingsModal(row, badge) {
   }
 
   modal.querySelector("#add-filter").onclick = () => addFilterRow();
-  modal.classList.remove("hidden");
+
+  // --- PREVIEW button logic (uses toggleProducts-style matching) ---
+  modal.querySelector("#preview-filters").onclick = () => {
+    const filters = [];
+    tbody.querySelectorAll("tr").forEach((tr) => {
+      const field = tr.querySelector("select")?.value;
+      const fieldDef = fieldMap.find((f) => f.name === field);
+      if (!field) return;
+
+      if (fieldDef?.fieldType === "multiple-select") {
+        const wrapper = tr.querySelector("td:nth-child(2) div");
+        const select = wrapper.querySelector("select[multiple]");
+        const mode = wrapper.querySelector("select:not([multiple])")?.value || "any";
+        if (select) {
+          const ids = Array.from(select.selectedOptions).map((o) => o.value);
+          filters.push({ field, ids, mode });
+        }
+      } else {
+        let value = "";
+        if (fieldDef?.fieldType === "List/Record" || fieldDef?.fieldType === "Checkbox") {
+          const select = tr.querySelector("td:nth-child(2) select");
+          if (select) value = select.value;
+        } else {
+          const input = tr.querySelector("td:nth-child(2) input");
+          if (input) value = input.value;
+        }
+        if (value) filters.push({ field, value });
+      }
+    });
+
+    if (!filters.length) {
+      preview.innerHTML = "<em>⚠️ Add at least one filter to preview products.</em>";
+      return;
+    }
+
+    const discountInput = row.querySelector(".discount-input");
+    const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+
+    const matched = fullData.filter((prod) =>
+      filters.every((f) => {
+        const field = fieldMap.find((fld) => fld.name === f.field);
+        if (!field) return true;
+
+        if (field.jsonFeed && (field.fieldType === "List/Record" || field.fieldType === "multiple-select")) {
+          const options = listCache[field.name] || [];
+          if (!options.length) return false;
+
+          const prodVals = String(prod[f.field] || "")
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
+
+          const prodIds = prodVals
+            .map((val) => {
+              let match = options.find((opt) => (opt.Name || "").toLowerCase() === val);
+              if (!match) {
+                match = options.find((opt) => (opt.Name || "").toLowerCase().endsWith(val));
+              }
+              return match ? String(match["Internal ID"]) : null;
+            })
+            .filter(Boolean);
+
+          const selectedIds = f.ids || (f.value ? [f.value] : []);
+          if (!prodIds.length) return false;
+
+          return f.mode === "all"
+            ? selectedIds.every((id) => prodIds.includes(id))
+            : selectedIds.some((id) => prodIds.includes(id));
+        }
+
+        if (field.fieldType === "Checkbox") {
+          const val = String(prod[f.field]).toLowerCase();
+          return f.value === "" || val === f.value.toLowerCase();
+        }
+
+        return String(prod[f.field] || "")
+          .toLowerCase()
+          .includes(String(f.value).toLowerCase());
+      })
+    );
+
+    // --- Render table like expand panel ---
+    let html = `<h4>Matching Products (${matched.length})</h4>`;
+    if (!matched.length) {
+      html += "<p>No products match filters.</p>";
+    } else {
+      html += `<table class="promo-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Base Price</th>
+            <th>Sale Price</th>
+            <th class="ref-col">Base + VAT</th>
+            <th class="ref-col">Sale + VAT</th>
+          </tr>
+        </thead>
+        <tbody>`;
+      matched.slice(0, 25).forEach((prod) => {
+        const base = parseFloat(prod["Base Price"]) || 0;
+        const sale = base * (1 - discount / 100);
+        const baseVAT = base * 1.2;
+        const saleVAT = sale * 1.2;
+        html += `<tr>
+          <td>${prod.Name}</td>
+          <td>${base.toFixed(2)}</td>
+          <td>${sale.toFixed(2)}</td>
+          <td class="ref-col">${baseVAT.toFixed(2)}</td>
+          <td class="ref-col">${saleVAT.toFixed(2)}</td>
+        </tr>`;
+      });
+      if (matched.length > 25) {
+        html += `<tr><td colspan="5"><em>+ ${matched.length - 25} more…</em></td></tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+    preview.innerHTML = html;
+  };
 
   modal.querySelector("#settings-cancel").onclick = () =>
     modal.classList.add("hidden");
@@ -719,17 +859,19 @@ function openSettingsModal(row, badge) {
     });
 
     row.dataset.filters = JSON.stringify(filters);
-
     if (filters.length > 0) {
       badge.textContent = `${filters.length} filter${filters.length > 1 ? "s" : ""}`;
       badge.classList.remove("hidden");
     } else {
       badge.classList.add("hidden");
     }
-
     modal.classList.add("hidden");
   };
+
+  modal.classList.remove("hidden");
 }
+
+
 
 // --- EXPAND PRODUCTS ---
 function toggleProducts(row, { preload = false } = {}) {

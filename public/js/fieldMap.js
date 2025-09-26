@@ -67,8 +67,8 @@ function urlFor(name) {
 
 // == product Development fields //
 export const fieldMap = [
-  {name: "internalid", disableField: true},
-  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text"},
+  { name: "Internal ID", disableField: true},
+  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text", disableField: true},
   { name: "Display Name", internalid: "displayname", fieldType: "Free-Form Text" },
   { name: "Supplier Name", internalid: "vendorname", fieldType: "Free-Form Text" },
   { name: "Class", internalid: "class", fieldType: "List/Record", jsonFeed: urlFor("Class") },
@@ -79,7 +79,9 @@ export const fieldMap = [
   { name: "Preferred Supplier", internalid: "vendor", fieldType: "List/Record", jsonFeed: urlFor("Preferred Supplier"),},
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
-  { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
+  { name: "NS record", internalid: "nsrecord", fieldType: "Link", disableField: true },
+  {name: "Record Type", internalid:"type ", fieldType: "Free-Form Text", disableField: true},
+  {name: "Size", disableField: true},
   ///////////////////////
   /* WEB FIELD MAPPING */
   ////////////////////

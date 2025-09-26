@@ -446,26 +446,38 @@ function renderBulkActionPanel(columns, parent) {
 
   const columnSelect = document.createElement("select");
   columnSelect.id = "bulk-column-select";
+
+  // ✅ Only include fields that are not disabled
   columns.forEach((col) => {
+    const field = fieldMap.find((f) => f.name === col);
+    if (field && field.disableField) return; // skip disabled fields
+
     const option = document.createElement("option");
     option.value = col;
     option.textContent = col;
     columnSelect.appendChild(option);
   });
 
-  // Input (for numeric fields)
+  // Numeric input
   const valueInput = document.createElement("input");
   valueInput.type = "number";
   valueInput.id = "bulk-value-input";
   valueInput.placeholder = "Enter value";
 
-  // Dropdown (for list/record fields)
+  // Text input (for Free-Form Text)
+  const textInput = document.createElement("input");
+  textInput.type = "text";
+  textInput.id = "bulk-text-input";
+  textInput.placeholder = "Enter text";
+  textInput.style.display = "none";
+
+  // Dropdown (for List/Record fields)
   const valueSelect = document.createElement("select");
   valueSelect.id = "bulk-value-select";
   valueSelect.classList.add("theme-select");
-  valueSelect.style.display = "none"; // hidden by default
+  valueSelect.style.display = "none";
 
-  // Action dropdown
+  // Action dropdown (for numeric fields only)
   const actionSelect = document.createElement("select");
   actionSelect.id = "bulk-action-select";
   ["Set To", "Add By Value", "Add By Percent"].forEach((action) => {
@@ -475,23 +487,27 @@ function renderBulkActionPanel(columns, parent) {
     actionSelect.appendChild(option);
   });
 
+  // ✅ Bulk checkbox control
+  const bulkCheckbox = document.createElement("input");
+  bulkCheckbox.type = "checkbox";
+  bulkCheckbox.id = "bulk-checkbox";
+  bulkCheckbox.style.display = "none";
+
+  const bulkCheckboxLabel = document.createElement("label");
+  bulkCheckboxLabel.textContent = "Set checked?";
+  bulkCheckboxLabel.style.marginLeft = "6px";
+  bulkCheckboxLabel.style.display = "none";
+
   const applyBtn = document.createElement("button");
   applyBtn.textContent = "Apply";
-  applyBtn.addEventListener("click", async () => {
-    const col = columnSelect.value;
-    const field = fieldMap.find((f) => f.name === col);
-
-    if (field && field.fieldType === "List/Record") {
-      applyBulkAction(col, valueSelect.value, "Set List Value");
-    } else {
-      applyBulkAction(col, valueInput.value, actionSelect.value);
-    }
-  });
 
   bulkPanel.appendChild(columnSelect);
   bulkPanel.appendChild(valueInput);
+  bulkPanel.appendChild(textInput);
   bulkPanel.appendChild(valueSelect);
   bulkPanel.appendChild(actionSelect);
+  bulkPanel.appendChild(bulkCheckbox);
+  bulkPanel.appendChild(bulkCheckboxLabel);
   bulkPanel.appendChild(applyBtn);
 
   panelContainer.appendChild(bulkPanel);
@@ -502,18 +518,26 @@ function renderBulkActionPanel(columns, parent) {
     panelHeader.classList.toggle("collapsed");
   });
 
-  // Change behavior when column changes
+  // --- Column change behavior ---
   columnSelect.addEventListener("change", async () => {
     const col = columnSelect.value;
     const field = fieldMap.find((f) => f.name === col);
 
+    // Reset defaults
+    valueInput.style.display = "inline-block";
+    textInput.style.display = "none";
+    actionSelect.style.display = "inline-block";
+    valueSelect.style.display = "none";
+    bulkCheckbox.style.display = "none";
+    bulkCheckboxLabel.style.display = "none";
+
     if (field && field.fieldType === "List/Record") {
-      // Show dropdown, hide numeric + action
+      // List/Record dropdown
       valueInput.style.display = "none";
+      textInput.style.display = "none";
       actionSelect.style.display = "none";
       valueSelect.style.display = "inline-block";
 
-      // Load options
       const options = await getListOptions(field);
       valueSelect.innerHTML = "";
       options.forEach((opt) => {
@@ -522,14 +546,113 @@ function renderBulkActionPanel(columns, parent) {
         option.textContent = opt["Name"];
         valueSelect.appendChild(option);
       });
-    } else {
-      // Show numeric + action, hide dropdown
+
+      applyBtn.onclick = () => {
+        applyBulkAction(col, valueSelect.value, "Set List Value");
+      };
+    } 
+    else if (field && field.fieldType === "Checkbox") {
+      // ✅ Show only checkbox
+      valueInput.style.display = "none";
+      textInput.style.display = "none";
+      actionSelect.style.display = "none";
+      valueSelect.style.display = "none";
+      bulkCheckbox.style.display = "inline-block";
+      bulkCheckboxLabel.style.display = "inline-block";
+
+      applyBtn.onclick = () => {
+        const isChecked = bulkCheckbox.checked;
+        const table = document.querySelector("table.csv-table");
+        if (!table) return;
+
+        const checkedRowIndices = new Set();
+        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+        const allChecked = [...allRowCbs].every(cb => cb.checked);
+
+        table.querySelectorAll("tr").forEach((row, index) => {
+          if (index === 0) return;
+          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
+          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+        });
+
+        checkedRowIndices.forEach((rowIndex) => {
+          filteredData[rowIndex][col] = isChecked;
+        });
+
+        displayJSONTable(filteredData).then(() => {
+          const newRows = document.querySelectorAll("table.csv-table tr");
+          newRows.forEach((row, index) => {
+            if (index === 0) return;
+            const cb = row.querySelector('td input[type="checkbox"].row-selector');
+            if (cb && checkedRowIndices.has(index - 1)) {
+              cb.checked = true;
+              row.classList.add("selected");
+            }
+          });
+          const selectAll = document.querySelector('input[type="checkbox"].select-all');
+          if (selectAll && allChecked) selectAll.checked = true;
+        });
+      };
+    }
+    else if (field && field.fieldType === "Free-Form Text") {
+      // ✅ Just a text input, no actions
+      valueInput.style.display = "none";
+      textInput.style.display = "inline-block";
+      actionSelect.style.display = "none";
+      valueSelect.style.display = "none";
+
+      applyBtn.onclick = () => {
+        const newText = textInput.value || "";
+        const table = document.querySelector("table.csv-table");
+        if (!table) return;
+
+        const checkedRowIndices = new Set();
+        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
+        const allChecked = [...allRowCbs].every(cb => cb.checked);
+
+        table.querySelectorAll("tr").forEach((row, index) => {
+          if (index === 0) return;
+          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
+          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+        });
+
+        checkedRowIndices.forEach((rowIndex) => {
+          filteredData[rowIndex][col] = newText;
+        });
+
+        displayJSONTable(filteredData).then(() => {
+          const newRows = document.querySelectorAll("table.csv-table tr");
+          newRows.forEach((row, index) => {
+            if (index === 0) return;
+            const cb = row.querySelector('td input[type="checkbox"].row-selector');
+            if (cb && checkedRowIndices.has(index - 1)) {
+              cb.checked = true;
+              row.classList.add("selected");
+            }
+          });
+          const selectAll = document.querySelector('input[type="checkbox"].select-all');
+          if (selectAll && allChecked) selectAll.checked = true;
+        });
+      };
+    }
+    else {
+      // Default numeric/text (with actions)
       valueInput.style.display = "inline-block";
+      textInput.style.display = "none";
       actionSelect.style.display = "inline-block";
       valueSelect.style.display = "none";
+
+      applyBtn.onclick = () => {
+        applyBulkAction(col, valueInput.value, actionSelect.value);
+      };
     }
   });
+
+  // Initialize default
+  columnSelect.dispatchEvent(new Event("change"));
 }
+
+
 
 
 
@@ -945,7 +1068,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
           td.style.backgroundColor = "#f5f5f5";
           td.style.cursor = "not-allowed";
 
-        // 🔹 Link FIRST (either explicit field type OR auto-detect raw <a ...>)
+          // 🔹 Link FIRST (either explicit field type OR auto-detect raw <a ...>)
         } else if ((field && field.fieldType === "Link") || (typeof rawVal === "string" && /<a\s+[^>]*href=/i.test(rawVal))) {
           const linkEl = renderLinkValue(rawVal);
           if (linkEl) {
@@ -958,31 +1081,46 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
           td.style.cursor = "default";
 
         } else if (field && field.fieldType === "Free-Form Text") {
-          // Textarea (invisible styling handled by CSS)
-          const textarea = document.createElement("textarea");
-          textarea.value = rawVal || "";
-          textarea.rows = 2;
-          textarea.style.resize = "none";
-          textarea.addEventListener("input", () => {
-            rowData[col] = textarea.value;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
-          });
-          td.appendChild(textarea);
+          if (field.disableField) {
+            // ✅ Read-only Free-Form Text
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            // Editable textarea
+            const textarea = document.createElement("textarea");
+            textarea.value = rawVal || "";
+            textarea.rows = 2;
+            textarea.style.resize = "none";
+            textarea.addEventListener("input", () => {
+              rowData[col] = textarea.value;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.appendChild(textarea);
+          }
 
         } else {
-          // Default text input
-          const input = document.createElement("input");
-          input.type = "text";
-          input.value = rawVal || "";
-          input.addEventListener("input", () => {
-            rowData[col] = input.value;
-            rowCheckbox.checked = true;
-            highlightRow(rowCheckbox);
-          });
-          td.appendChild(input);
+          if (field && field.disableField) {
+            // ✅ Read-only fallback (any other disabled text field)
+            td.textContent = rawVal || "";
+            td.style.color = "#666";
+            td.style.backgroundColor = "#f5f5f5";
+            td.style.cursor = "not-allowed";
+          } else {
+            // Default editable text input
+            const input = document.createElement("input");
+            input.type = "text";
+            input.value = rawVal || "";
+            input.addEventListener("input", () => {
+              rowData[col] = input.value;
+              rowCheckbox.checked = true;
+              highlightRow(rowCheckbox);
+            });
+            td.appendChild(input);
+          }
         }
-
         row.appendChild(td);
       }
 
