@@ -1,0 +1,72 @@
+{
+  "title": "November super sale",
+  "sections": [
+    {
+      "label": "test Run",
+      "color": "rgba(234, 16, 16, 0.2)",
+      "rows": [
+        {
+          "label": "Gel Essence Comfort",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Gel Essence Comfort"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        },
+        {
+          "label": "Gel Essence Ortho",
+          "discount": "60",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Gel Essence Ortho"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Comfort",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Gel Plush Comfort"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Ortho",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Gel Plush Ortho"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-09-26T10:52:38.288Z"
+}
