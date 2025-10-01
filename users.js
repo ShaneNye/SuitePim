@@ -56,5 +56,14 @@ export const users = [
         sandbox_tokenSecret:"4c82b41394345e308595083d3bdf5dd71c9839e094bb0cf721165c1c5a49036c",
         prod_tokenId: "3e5ab9c8b68da9a6d917b7c0bcdc2a3df2aacf5a264c7cf0b2fb204752d5f6ac",
         prod_tokenSecret: "0f9d76cb675a2bf981c7c73eadc90b9f1f62835ad69e36af2123d240a5f57cd7"
+    },
+    {
+        username: "Chris Mortimer",
+        password: "hollowknight",
+        sandbox_tokenSecret:"",
+        sandbox_tokenId: "ef4c5e540fed2c96f13103a289c90398fa9255389939eb353a35b59d919954a5",
+        sandbox_tokenSecret:"294a819a3d170a9edd0b75ceb2e95066e673ae43c2aa2c31d15f66b57ccd2ebb",
+        prod_tokenId: "709e7ff5f87b3df8568ff06991168d4ed0d69fedd8b53945ae0c2273d21853eb",
+        prod_tokenSecret: "4a3ef1673f989cec2265eec38c32f324b4d7175341a1d01dda8b47307255ded9"
     }
 ];
