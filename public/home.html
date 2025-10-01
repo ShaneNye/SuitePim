@@ -14,46 +14,85 @@
     <div id="header-container"></div>
 
     <div class="page-title">
-        <h1 id="page-title"></h1>
     </div>
 
     <div class="home-layout">
         <!-- Welcome / Release Notes -->
         <div class="welcome">
             <h1>Welcome, <span id="username-placeholder"></span>!</h1>
-            <h3>Alpha Release Notes | 1.0.15:</h3>
+            <h3>Alpha Release Notes | 1.0.16:</h3>
             <h4>This Platform serves as a Management Tool for Lot Numbered Inventory Items within the Sussex Beds
-                Netsuite
-                Enviroment for the Product Development & Website Teams.
+                Netsuite Enviroment for the Product Development & Website Teams.
                 <h4 style="color:red">To access the menu hover your mouse over the blue Header</h4>
-                <h4 class="testing-note"><strong style="color:red;">Product Development Testing:</strong>
-                    Please go through all the processes you’d normally complete using the Live Spreadsheet. If you come
-                    across anything you can’t do, or notice any features that aren’t working as expected, just raise a
+                <h4 class="testing-note"><strong style="color:red;">Testing:</strong>
+                    Please go through all the processes you’d normally complete using the Live Spreadsheet & Promotion &
+                    offers Sheet.
+                    Please refer to the SuitePim UAT document to see a full list of processes and a checklist to
+                    complete, If you come across anything you can’t do, or notice any features that aren’t working as
+                    expected,
+                    just raise a
                     <strong style="color:red;">support ticket</strong> and I look into it.
-
-                    It would be great if all testing could be wrapped up by <strong style="color: red;">22/09</strong>,
-                    as a final development period will
-                    begin then, ready for final review and full release by <strong style="color:red">01/10</strong>.
                 </h4>
-                Current Feature Status:<br>
+                <h4>Current Feature Status:</h4>
             </h4>
-            <ul>
-                <li><strong>Product Data :</strong></li>
-                <ul>This feature is a replacement for the product development teams live spreadsheet
-                    exsisting items can be searched, reviewed, updated and pushed back to netsuite.
-                    black columns are 'Dynamic' - they do not import into netsuite but they give the user
-                    an indication of supporting information such as 'Retail Price' & 'Margin'
-                </ul>
-                <li><strong>Product Validation :</strong></li>
-                <ul>This feature allows users to quickly see inventory items that are missing standard field
-                    configuration that may cause issues with items being processed correctly.
-                </ul>
-                <li><strong>Request Support :</strong></li>
-                <ul>This Feature allows users to raise & manage SuitePim support requests which is linked to jira & Git
-                    for support team management.
-                </ul>
+            <div class="status-widgets">
 
-            </ul>
+                <div class="status-widget">
+                    <h3>🏠 Home Dashboard</h3>
+                    <p class="status">Status: <span class="status-indicator online">Online</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-home-issues">0<br><em>No open issues</em></div>
+                    </div>
+                </div>
+
+                <div class="status-widget">
+                    <h3>📦 Product Data</h3>
+                    <p class="status">Status: <span class="status-indicator online">Online</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-product-data-issues">0<br><em>No open issues</em></div>
+                    </div>
+                </div>
+
+                <div class="status-widget">
+                    <h3>✅ Product Validation</h3>
+                    <p class="status">Status: <span class="status-indicator online">Online</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-product-validation-issues">0<br><em>No open issues</em></div>
+                    </div>
+                </div>
+
+                <div class="status-widget">
+                    <h3>🌐 Web Data Management</h3>
+                    <p class="status">Status: <span class="status-indicator online">Online</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-web-management-issues">0<br><em>No open issues</em></div>
+                    </div>
+                </div>
+
+                <div class="status-widget">
+                    <h3>🎯 Promotion & Offers</h3>
+                    <p class="status">Status: <span class="status-indicator online">Online</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-promotion-offers-issues">0<br><em>No open issues</em></div>
+                    </div>
+                </div>
+                <div class="status-widget">
+                    <h3>📝 Pending Review</h3>
+                    <p class="status">Status: <span class="status-indicator online">No Pending Issues</span></p>
+                    <div class="issues">
+                        <strong>Logged Issues:</strong>
+                        <div class="open-pending-review-issues">0</div>
+                    </div>
+                </div>
+
+
+            </div>
+
             <h4>Once Fully complete & Deployed a full user guide will be available for the Sussex Beds | SuitePim</h4>
         </div>
 

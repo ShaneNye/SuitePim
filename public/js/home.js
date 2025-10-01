@@ -1,5 +1,12 @@
 // public/js/home.js
 window.addEventListener("DOMContentLoaded", async () => {
+  // --- One-time per-session refresh ---
+  if (!sessionStorage.getItem("homeRefreshed")) {
+    sessionStorage.setItem("homeRefreshed", "true");
+    window.location.reload();
+    return; // stop execution until after reload
+  }
+
   // --- Auth / user ---
   try {
     const res = await fetch("/get-user");
@@ -32,24 +39,27 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     if (!issues || issues.length === 0) {
       listEl.innerHTML = "<li>No open issues 🎉</li>";
-      return;
+    } else {
+      issues.forEach((issue) => {
+        const li = document.createElement("li");
+        li.dataset.issueNumber = issue.number; // for gold dot updates
+        li.textContent = `${issue.title} — ${issue.appUser || issue.user.login}`;
+
+        if (issue.labels && issue.labels.includes("alpha-feedback")) {
+          li.classList.add("alpha-feedback");
+        }
+
+        // Initial gold dot check
+        updateGoldDot(li, issue.number);
+
+        li.addEventListener("click", () => openIssueModal(issue));
+        listEl.appendChild(li);
+      });
     }
 
-    issues.forEach((issue) => {
-      const li = document.createElement("li");
-      li.dataset.issueNumber = issue.number; // for gold dot updates
-      li.textContent = `${issue.title} — ${issue.appUser || issue.user.login}`;
+    // ✅ Update the feature status dashboard blocks
+    updateDashboardStatuses(issues);
 
-      if (issue.labels && issue.labels.includes("alpha-feedback")) {
-        li.classList.add("alpha-feedback");
-      }
-
-      // Initial gold dot check
-      updateGoldDot(li, issue.number);
-
-      li.addEventListener("click", () => openIssueModal(issue));
-      listEl.appendChild(li);
-    });
   } catch (err) {
     console.error("Error fetching issues:", err);
     const listEl = document.getElementById("issues-list");
@@ -75,6 +85,117 @@ window.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
+
+function updateDashboardStatuses(issues) {
+  const categories = {
+    home: { div: ".open-home-issues", label: "home", title: "Home Dashboard" },
+    "product-data": { div: ".open-product-data-issues", label: "Product Data", title: "Product Data" },
+    "product-validation": { div: ".open-product-validation-issues", label: "Product Validation", title: "Product Validation" },
+    "web-management": { div: ".open-web-management-issues", label: "Web Management", title: "Web Data Management" },
+    "promotion-offers": { div: ".open-promotion-offers-issues", label: "Promotions & Offers", title: "Promotion & Offers" },
+    "pending-review": { div: ".open-pending-review-issues", label: null, title: "Pending Review" }
+  };
+
+  // Keep track of IDs already assigned to a category
+  const categorizedIds = new Set();
+
+  // First handle all "normal" categories
+  Object.entries(categories).forEach(([key, cat]) => {
+    if (key === "pending-review") return; // skip for now
+
+    const matching = issues.filter(i =>
+      i.labels?.some(l =>
+        l.toLowerCase().includes(key) || l.toLowerCase() === cat.label?.toLowerCase()
+      )
+    );
+
+    matching.forEach(i => categorizedIds.add(i.number));
+    updateCategoryTile(cat, matching);
+  });
+
+  // Handle Pending Review = any issue not in other categories
+  const pending = issues.filter(i => !categorizedIds.has(i.number));
+  updateCategoryTile(categories["pending-review"], pending);
+}
+
+function updateCategoryTile(cat, matching) {
+  const container = document.querySelector(cat.div);
+  if (!container) return;
+
+  const count = matching.length;
+  container.innerHTML = `<span class="issue-count">${count}</span>`;
+
+  if (count > 0) {
+    container.style.cursor = "pointer";
+    container.onclick = () => openIssuesModal(cat.title, matching);
+  } else {
+    container.style.cursor = "default";
+    container.onclick = null;
+  }
+
+  // Only normal categories get colored status — Pending Review is always neutral
+  const widget = container.closest(".status-widget");
+  const statusSpan = widget?.querySelector(".status-indicator");
+  if (!statusSpan) return;
+
+  if (cat.title === "Pending Review") {
+    if (count === 0) {
+      statusSpan.textContent = "No Pending Issues";
+      statusSpan.className = "status-indicator online";
+    } else {
+      statusSpan.textContent = "Issues Awaiting Categorisation";
+      statusSpan.className = "status-indicator warning";
+    }
+    return;
+  }
+
+  // Normal category status logic
+  if (count === 0) {
+    statusSpan.textContent = "Online";
+    statusSpan.className = "status-indicator online";
+  } else if (matching.some(i => i.labels.includes("Critical Error"))) {
+    statusSpan.textContent = "Offline - Critical error Reported";
+    statusSpan.className = "status-indicator offline";
+  } else {
+    statusSpan.textContent = "Online With Open Issues";
+    statusSpan.className = "status-indicator warning";
+  }
+}
+
+
+// --- Modal for issue details ---
+function openIssuesModal(title, issues) {
+  let modal = document.getElementById("issues-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "issues-modal";
+    modal.className = "issues-modal";
+    modal.innerHTML = `
+      <div class="issues-modal-content">
+        <span class="close-btn">&times;</span>
+        <h3 id="issues-modal-title"></h3>
+        <div id="issues-modal-body"></div>
+      </div>`;
+    document.body.appendChild(modal);
+
+    modal.querySelector(".close-btn").onclick = () => modal.classList.remove("open");
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
+    });
+  }
+
+  document.getElementById("issues-modal-title").textContent = `${title} – ${issues.length} Open Issue${issues.length > 1 ? "s" : ""}`;
+
+  const body = document.getElementById("issues-modal-body");
+  body.innerHTML = issues
+    .map(i => `<div class="issue-item">#${i.number} — ${i.title}</div>`)
+    .join("");
+
+  modal.classList.add("open");
+}
+
+
+
 // --- Helpers ---
 function formatDate(iso) {
   const d = new Date(iso);
@@ -93,7 +214,6 @@ function closeIssueModal() {
 }
 
 function openIssueModal(issue) {
-
   const titleEl = document.getElementById("modal-title");
   const reporterEl = document.getElementById("modal-reporter");
   const dateEl = document.getElementById("modal-date");
@@ -254,6 +374,8 @@ function renderComment(
   }
 }
 
+
+
 // --- Reply UI helper ---
 function addReplyUI(issue, commentsContainer, userAlignments, availableAlignments, nextIndexFn) {
   const oldReplyBox = document.getElementById("reply-box");
@@ -276,7 +398,6 @@ function addReplyUI(issue, commentsContainer, userAlignments, availableAlignment
     const body = replyBox.value.trim();
     if (!body) return;
 
-
     try {
       const res = await fetch(`/issues/${issue.number}/comment`, {
         method: "POST",
@@ -286,8 +407,6 @@ function addReplyUI(issue, commentsContainer, userAlignments, availableAlignment
       const result = await res.json();
 
       if (res.ok && result.success) {
-
-        // Always insert before reply box
         renderComment(
           result.comment,
           commentsContainer,
