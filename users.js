@@ -40,5 +40,21 @@ export const users = [
         sandbox_tokenSecret:"93c2020bb75758a7afd17014f2191153f15a3622beca39b5c598a54ac6b7cc54",
         prod_tokenId: "d35b1833e021d17f824cfc177e33577804a1613f0b96bfeb7afac46fa4384aba",
         prod_tokenSecret: "a47ca6d3fc3665f18b1366a215c2508f81911ad6c3145fb8877ef0a1cfa7dcdd"
+    }, 
+    {
+        username: "Darren Wells",
+        password: "Hastings12",
+        sandbox_tokenId: "f50908a20ef94013c131775265ef07ac260c7dabb674f7c1c4e19bd53a0f6e48",
+        sandbox_tokenSecret:"453d9638284613f5f14e7807f3c3d54cf0199fa4a0df0e6552a8d18e9b10130b",
+        prod_tokenId: "3b410242aaf63d7fcbf0196f3c08b343c7453f6dda796a847ca19dd82847b570",
+        prod_tokenSecret: "294bbcc7ed2a8eec6848844f1c37eaedd22fd5345679f9df04ad7792cdd674ab"
+    },
+    {
+        username: "Josh Pickering",
+        password: "BedsBeds1234",
+        sandbox_tokenId: "9c1f1ad5281297a9b69421ca2195add55d4c84e328809fba712c10ffe964b07e",
+        sandbox_tokenSecret:"4c82b41394345e308595083d3bdf5dd71c9839e094bb0cf721165c1c5a49036c",
+        prod_tokenId: "3e5ab9c8b68da9a6d917b7c0bcdc2a3df2aacf5a264c7cf0b2fb204752d5f6ac",
+        prod_tokenSecret: "0f9d76cb675a2bf981c7c73eadc90b9f1f62835ad69e36af2123d240a5f57cd7"
     }
 ];
