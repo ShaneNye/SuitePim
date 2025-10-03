@@ -44,7 +44,6 @@
       "public/**/*",
       "fonts/**/*",
       "package.json",
-      ".env",
       "!release/**",
       "!dist/**",
       "!win-unpacked/**",
