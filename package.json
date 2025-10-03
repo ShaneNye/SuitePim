@@ -56,9 +56,9 @@
     ],
     "extraResources": [
       {
-        "from": ".env",
-        "to": ".env"
-      },
+    "from": "./.env",   
+    "to": ".env"
+  },
       {
         "from": "public/fonts/",
         "to": "fonts",
