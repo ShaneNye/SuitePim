@@ -6,6 +6,7 @@ on:
 jobs:
   build-mac:
     runs-on: macos-latest
+    environment: Suite Pim   # 👈 ensures your secrets are injected
 
     steps:
       - name: Checkout repository
@@ -20,10 +21,60 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # 🔑 Create .env from GitHub Secrets
+      - name: Create .env from secrets
+        run: |
+          echo "GITHUB_TOKEN=${{ secrets.SUITEPIM_GH_TOKEN }}" >> .env
+          echo "GITHUB_OWNER=${{ secrets.SUITEPIM_GH_OWNER }}" >> .env
+          echo "GITHUB_REPO=${{ secrets.SUITEPIM_GH_REPO }}" >> .env
+
+          echo "NETSUITE_SANDBOX_ACCOUNT=${{ secrets.NETSUITE_SANDBOX_ACCOUNT }}" >> .env
+          echo "NETSUITE_SANDBOX_ACCOUNT_DASH=${{ secrets.NETSUITE_SANDBOX_ACCOUNT_DASH }}" >> .env
+          echo "NETSUITE_SANDBOX_KEY=${{ secrets.NETSUITE_SANDBOX_KEY }}" >> .env
+          echo "NETSUITE_SANDBOX_SECRET=${{ secrets.NETSUITE_SANDBOX_SECRET }}" >> .env
+          echo "NETSUITE_SANDBOX_URL=${{ secrets.NETSUITE_SANDBOX_URL }}" >> .env
+          echo "NETSUITE_SANDBOX_IMAGE_ENDPOINT=${{ secrets.NETSUITE_SANDBOX_IMAGE_ENDPOINT }}" >> .env
+
+          echo "NETSUITE_PROD_ACCOUNT=${{ secrets.NETSUITE_PROD_ACCOUNT }}" >> .env
+          echo "NETSUITE_PROD_ACCOUNT_DASH=${{ secrets.NETSUITE_PROD_ACCOUNT_DASH }}" >> .env
+          echo "NETSUITE_PROD_KEY=${{ secrets.NETSUITE_PROD_KEY }}" >> .env
+          echo "NETSUITE_PROD_SECRET=${{ secrets.NETSUITE_PROD_SECRET }}" >> .env
+          echo "NETSUITE_PROD_URL=${{ secrets.NETSUITE_PROD_URL }}" >> .env
+          echo "NETSUITE_PROD_IMAGE_ENDPOINT=${{ secrets.NETSUITE_PROD_IMAGE_ENDPOINT }}" >> .env
+
+          echo "WOOCOMMERCE_URL_SANDBOX=${{ secrets.WOOCOMMERCE_URL_SANDBOX }}" >> .env
+          echo "WOOCOMMERCE_SANDBOX_KEY=${{ secrets.WOOCOMMERCE_SANDBOX_KEY }}" >> .env
+          echo "WOOCOMMERCE_SANDBOX_SECRET=${{ secrets.WOOCOMMERCE_SANDBOX_SECRET }}" >> .env
+          echo "WOOCOMMERCE_PROD_URL=${{ secrets.WOOCOMMERCE_PROD_URL }}" >> .env
+          echo "WOOCOMMERCE_PROD_KEY=${{ secrets.WOOCOMMERCE_PROD_KEY }}" >> .env
+          echo "WOOCOMMERCE_PROD_SECRET=${{ secrets.WOOCOMMERCE_PROD_SECRET }}" >> .env
+
+      # 🕵️ Debug before build
+      - name: Verify .env presence before build
+        run: |
+          echo "=== Root contents ==="
+          ls -la .
+          echo "=== .env keys created (values redacted) ==="
+          cat .env | sed 's/=.*/=[REDACTED]/'
+
       - name: Build Mac Universal DMG (no publish)
         run: |
           echo "🍏 Building Mac universal dmg (artifact only)"
           npx electron-builder --mac dmg --universal -p never
+
+      # 🕵️ Debug after build
+      - name: Inspect Resources folder after build
+        run: |
+          echo "=== Contents of Resources folder ==="
+          ls -la release/mac-universal/SuitePim.app/Contents/Resources || true
+
+          echo "=== Check for .env file ==="
+          if [ -f release/mac-universal/SuitePim.app/Contents/Resources/.env ]; then
+            echo "✅ .env file found in Resources!"
+            head -n 10 release/mac-universal/SuitePim.app/Contents/Resources/.env | sed 's/=.*/=[REDACTED]/'
+          else
+            echo "❌ .env file is missing in Resources."
+          fi
 
       - name: Upload DMG as Artifact
         uses: actions/upload-artifact@v4
