@@ -18,8 +18,6 @@ const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPk
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// ✅ Safe .env loader (works in dev + packaged)
-// ✅ Safe .env loader (works in dev + packaged)
 try {
   // 1. Packaged app → Contents/Resources/.env
   const packagedEnv = path.join(process.resourcesPath || "", ".env");
@@ -45,9 +43,21 @@ try {
       }
     }
   }
+
+  // 🔎 Debug output to confirm important vars are available
+  console.log("🔎 ENV DEBUG:", {
+    GITHUB_OWNER: process.env.GITHUB_OWNER,
+    GITHUB_REPO: process.env.GITHUB_REPO,
+    HAS_GITHUB_TOKEN: !!process.env.GITHUB_TOKEN,
+    HAS_NETSUITE_SANDBOX_URL: !!process.env.NETSUITE_SANDBOX_URL,
+    HAS_NETSUITE_PROD_URL: !!process.env.NETSUITE_PROD_URL,
+    HAS_WOOCOMMERCE_SANDBOX_URL: !!process.env.WOOCOMMERCE_URL_SANDBOX,
+    HAS_WOOCOMMERCE_PROD_URL: !!process.env.WOOCOMMERCE_PROD_URL
+  });
 } catch (err) {
   console.error("❌ Failed to load .env:", err.message);
 }
+
 
 
 
