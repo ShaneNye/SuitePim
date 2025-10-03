@@ -19,25 +19,36 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // ✅ Safe .env loader (works in dev + packaged)
+// ✅ Safe .env loader (works in dev + packaged)
 try {
-  // Packaged app → resources/.env
+  // 1. Packaged app → Contents/Resources/.env
   const packagedEnv = path.join(process.resourcesPath || "", ".env");
   if (process.resourcesPath && fs.existsSync(packagedEnv)) {
     dotenv.config({ path: packagedEnv });
     console.log("✅ Loaded .env from packaged:", packagedEnv);
+
   } else {
-    // Dev → project root
-    const devEnv = path.join(__dirname, ".env");
-    if (fs.existsSync(devEnv)) {
-      dotenv.config({ path: devEnv });
-      console.log("✅ Loaded .env from dev:", devEnv);
+    // 2. Check inside asar (next to server.js)
+    const asarEnv = path.join(__dirname, ".env");
+    if (fs.existsSync(asarEnv)) {
+      dotenv.config({ path: asarEnv });
+      console.log("✅ Loaded .env from asar bundle:", asarEnv);
+
     } else {
-      console.warn("⚠️ No .env found — GitHub features may not work");
+      // 3. Dev → project root
+      const devEnv = path.join(process.cwd(), ".env");
+      if (fs.existsSync(devEnv)) {
+        dotenv.config({ path: devEnv });
+        console.log("✅ Loaded .env from dev:", devEnv);
+      } else {
+        console.warn("⚠️ No .env found — GitHub features may not work");
+      }
     }
   }
 } catch (err) {
   console.error("❌ Failed to load .env:", err.message);
 }
+
 
 
 // ✅ Dynamic imports for local modules (safe in dev + packaged)
