@@ -87,11 +87,11 @@
       ]
     },
     {
-      "label": "Heritage",
+      "label": "Heritage Heritge deluxe",
       "color": "rgba(200, 212, 249, 0.2)",
       "rows": [
         {
-          "label": "Heritage",
+          "label": "Heritage and Heritage Deluxe",
           "discount": "60",
           "pos": "",
           "discPos": "",
@@ -110,5 +110,5 @@
       ]
     }
   ],
-  "savedAt": "2025-10-21T13:09:53.121Z"
+  "savedAt": "2025-10-21T13:18:54.214Z"
 }
