@@ -3,45 +3,53 @@ name: Build Mac DMG (Artifact Only)
 on:
   workflow_dispatch:   # manual trigger only
 
+concurrency:
+  group: mac-dmg
+  cancel-in-progress: true   # ensures only one fresh run at a time
+
 jobs:
   build-mac:
     runs-on: macos-latest
-    environment: Suite Pim   # 👈 ensures your secrets are injected
+    environment: Suite Pim   # 👈 pulls secrets from your GitHub Environment
 
     steps:
-      - name: Checkout repository
+      - name: 🛎️ Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: 🧱 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: npm ci
 
-      # 🔑 Create .env from GitHub Secrets
-      - name: Create .env from secrets
+      # 🧹 Ensure no stale .env exists
+      - name: 🔄 Clear any old .env files
+        run: |
+          echo "🧹 Removing any existing .env to avoid stale data..."
+          rm -f .env
+          ls -la . | grep .env || echo "No .env file currently present."
+
+      # 🔑 Create .env dynamically from GitHub Secrets
+      - name: 🧾 Create .env from secrets
         run: |
           echo "GITHUB_TOKEN=${{ secrets.SUITEPIM_GH_TOKEN }}" >> .env
           echo "GITHUB_OWNER=${{ secrets.SUITEPIM_GH_OWNER }}" >> .env
           echo "GITHUB_REPO=${{ secrets.SUITEPIM_GH_REPO }}" >> .env
-
           echo "NETSUITE_SANDBOX_ACCOUNT=${{ secrets.NETSUITE_SANDBOX_ACCOUNT }}" >> .env
           echo "NETSUITE_SANDBOX_ACCOUNT_DASH=${{ secrets.NETSUITE_SANDBOX_ACCOUNT_DASH }}" >> .env
           echo "NETSUITE_SANDBOX_KEY=${{ secrets.NETSUITE_SANDBOX_KEY }}" >> .env
           echo "NETSUITE_SANDBOX_SECRET=${{ secrets.NETSUITE_SANDBOX_SECRET }}" >> .env
           echo "NETSUITE_SANDBOX_URL=${{ secrets.NETSUITE_SANDBOX_URL }}" >> .env
           echo "NETSUITE_SANDBOX_IMAGE_ENDPOINT=${{ secrets.NETSUITE_SANDBOX_IMAGE_ENDPOINT }}" >> .env
-
           echo "NETSUITE_PROD_ACCOUNT=${{ secrets.NETSUITE_PROD_ACCOUNT }}" >> .env
           echo "NETSUITE_PROD_ACCOUNT_DASH=${{ secrets.NETSUITE_PROD_ACCOUNT_DASH }}" >> .env
           echo "NETSUITE_PROD_KEY=${{ secrets.NETSUITE_PROD_KEY }}" >> .env
           echo "NETSUITE_PROD_SECRET=${{ secrets.NETSUITE_PROD_SECRET }}" >> .env
           echo "NETSUITE_PROD_URL=${{ secrets.NETSUITE_PROD_URL }}" >> .env
           echo "NETSUITE_PROD_IMAGE_ENDPOINT=${{ secrets.NETSUITE_PROD_IMAGE_ENDPOINT }}" >> .env
-
           echo "WOOCOMMERCE_URL_SANDBOX=${{ secrets.WOOCOMMERCE_URL_SANDBOX }}" >> .env
           echo "WOOCOMMERCE_SANDBOX_KEY=${{ secrets.WOOCOMMERCE_SANDBOX_KEY }}" >> .env
           echo "WOOCOMMERCE_SANDBOX_SECRET=${{ secrets.WOOCOMMERCE_SANDBOX_SECRET }}" >> .env
@@ -49,34 +57,40 @@ jobs:
           echo "WOOCOMMERCE_PROD_KEY=${{ secrets.WOOCOMMERCE_PROD_KEY }}" >> .env
           echo "WOOCOMMERCE_PROD_SECRET=${{ secrets.WOOCOMMERCE_PROD_SECRET }}" >> .env
 
-      # 🕵️ Debug before build
-      - name: Verify .env presence before build
+      # 🕵️ Verify the .env before building
+      - name: ✅ Verify .env presence and keys
         run: |
-          echo "=== Root contents ==="
+          echo "=== Root directory ==="
           ls -la .
           echo "=== .env keys created (values redacted) ==="
           cat .env | sed 's/=.*/=[REDACTED]/'
+          echo "🔍 Checking for GITHUB_TOKEN..."
+          if grep -q "GITHUB_TOKEN=" .env; then
+            echo "✅ GITHUB_TOKEN found."
+          else
+            echo "❌ GITHUB_TOKEN missing! Check your environment secrets."
+            exit 1
+          fi
 
-      - name: Build Mac Universal DMG (no publish)
+      - name: 🍏 Build Mac Universal DMG (no publish)
         run: |
-          echo "🍏 Building Mac universal dmg (artifact only)"
+          echo "🚀 Building Mac universal DMG (artifact only)"
           npx electron-builder --mac dmg --universal -p never
 
-      # 🕵️ Debug after build
-      - name: Inspect Resources folder after build
+      # 🔍 Verify .env included in Resources folder
+      - name: 🕵️ Inspect Resources folder after build
         run: |
           echo "=== Contents of Resources folder ==="
           ls -la release/mac-universal/SuitePim.app/Contents/Resources || true
-
-          echo "=== Check for .env file ==="
+          echo "=== Checking for .env file ==="
           if [ -f release/mac-universal/SuitePim.app/Contents/Resources/.env ]; then
             echo "✅ .env file found in Resources!"
             head -n 10 release/mac-universal/SuitePim.app/Contents/Resources/.env | sed 's/=.*/=[REDACTED]/'
           else
-            echo "❌ .env file is missing in Resources."
+            echo "❌ .env file missing in Resources. Check extraResources in package.json."
           fi
 
-      - name: Upload DMG as Artifact
+      - name: 📦 Upload DMG as Artifact
         uses: actions/upload-artifact@v4
         with:
           name: SuitePim-mac-dmg
