@@ -1,0 +1,114 @@
+{
+  "title": "January Sale",
+  "sections": [
+    {
+      "label": "A Group Bed Frames",
+      "color": "rgba(240, 138, 112, 0.2)",
+      "rows": [
+        {
+          "label": "A Group Bed Frames",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "32"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "B Group Bed Frames",
+      "color": "rgba(240, 138, 112, 0.2)",
+      "rows": [
+        {
+          "label": "",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "33"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Emerald Mattress",
+      "color": "rgba(200, 212, 249, 0.2)",
+      "rows": [
+        {
+          "label": "Emerald Mattress",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Emerald Mattress :"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Gemstone Mattresses",
+      "color": "rgba(200, 212, 249, 0.2)",
+      "rows": [
+        {
+          "label": "Gemstone Mattresses",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "96"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Heritage Heritge deluxe",
+      "color": "rgba(200, 212, 249, 0.2)",
+      "rows": [
+        {
+          "label": "Heritage and Heritage Deluxe",
+          "discount": "60",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "98",
+                "99"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-10-21T13:46:44.424Z"
+}
