@@ -1,0 +1,52 @@
+name: Generate .env file for SuitePim
+on:
+  workflow_dispatch:  # manual trigger only (safe for secrets)
+
+jobs:
+  create-env:
+    name: 🧾 Create .env file
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🧱 Setup Node (optional, for consistency)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 🧾 Create .env file from GitHub Secrets
+        run: |
+          echo "GITHUB_OWNER=${{ secrets.GITHUB_OWNER }}" >> .env
+          echo "GITHUB_REPO=${{ secrets.GITHUB_REPO }}" >> .env
+          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> .env
+          echo "NETSUITE_SANDBOX_ACCOUNT=${{ secrets.NETSUITE_SANDBOX_ACCOUNT }}" >> .env
+          echo "NETSUITE_SANDBOX_ACCOUNT_DASH=${{ secrets.NETSUITE_SANDBOX_ACCOUNT_DASH }}" >> .env
+          echo "NETSUITE_SANDBOX_KEY=${{ secrets.NETSUITE_SANDBOX_KEY }}" >> .env
+          echo "NETSUITE_SANDBOX_SECRET=${{ secrets.NETSUITE_SANDBOX_SECRET }}" >> .env
+          echo "NETSUITE_SANDBOX_URL=${{ secrets.NETSUITE_SANDBOX_URL }}" >> .env
+          echo "NETSUITE_PROD_ACCOUNT=${{ secrets.NETSUITE_PROD_ACCOUNT }}" >> .env
+          echo "NETSUITE_PROD_ACCOUNT_DASH=${{ secrets.NETSUITE_PROD_ACCOUNT_DASH }}" >> .env
+          echo "NETSUITE_PROD_KEY=${{ secrets.NETSUITE_PROD_KEY }}" >> .env
+          echo "NETSUITE_PROD_SECRET=${{ secrets.NETSUITE_PROD_SECRET }}" >> .env
+          echo "NETSUITE_PROD_URL=${{ secrets.NETSUITE_PROD_URL }}" >> .env
+          echo "WOOCOMMERCE_URL_SANDBOX=${{ secrets.WOOCOMMERCE_URL_SANDBOX }}" >> .env
+          echo "WOOCOMMERCE_SANDBOX_KEY=${{ secrets.WOOCOMMERCE_SANDBOX_KEY }}" >> .env
+          echo "WOOCOMMERCE_SANDBOX_SECRET=${{ secrets.WOOCOMMERCE_SANDBOX_SECRET }}" >> .env
+          echo "WOOCOMMERCE_PROD_URL=${{ secrets.WOOCOMMERCE_PROD_URL }}" >> .env
+          echo "WOOCOMMERCE_PROD_KEY=${{ secrets.WOOCOMMERCE_PROD_KEY }}" >> .env
+          echo "WOOCOMMERCE_PROD_SECRET=${{ secrets.WOOCOMMERCE_PROD_SECRET }}" >> .env
+
+      - name: ✅ Verify .env contents (safely show keys only)
+        run: |
+          echo "🧩 .env created successfully!"
+          echo "Contains:"
+          grep -E '^[A-Z_]+=.+$' .env | cut -d'=' -f1
+
+      - name: 📦 Upload .env as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: suitepim-env
+          path: .env
+          retention-days: 1
