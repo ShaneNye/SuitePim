@@ -1,0 +1,46 @@
+{
+  "title": "Sue's Mega Sale",
+  "sections": [
+    {
+      "label": "Bamboo es",
+      "color": "rgba(152, 221, 160, 0.2)",
+      "rows": [
+        {
+          "label": "Bamboo Tranquility Mattress",
+          "discount": "55",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "bamboo tranquility"
+            }
+          ]
+        },
+        {
+          "label": "Bamboo Relaxation Mattress",
+          "discount": "65",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "Bamboo relaxation"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-10-24T15:27:04.810Z"
+}
