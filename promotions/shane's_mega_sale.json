@@ -1,0 +1,137 @@
+{
+  "title": "shane's mega sale",
+  "sections": [
+    {
+      "label": "Bamboo Mattresses",
+      "color": "rgba(152, 221, 160, 0.2)",
+      "rows": [
+        {
+          "label": "Bamboo Tranquility Mattress",
+          "discount": "90",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "bamboo tranquility"
+            }
+          ]
+        },
+        {
+          "label": "Bamboo Relaxation Mattress",
+          "discount": "90",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "Bamboo relaxation"
+            }
+          ]
+        },
+        {
+          "label": "Bamboo Nurture Mattress",
+          "discount": "90",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "bamboo nurture"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Gel Mattresses",
+      "color": "rgba(113, 165, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Gel Essence Comfort Mattress",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "Gel Essence Comfort"
+            }
+          ]
+        },
+        {
+          "label": "Gel Essence Ortho Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "gel essence ortho"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Comfort Mattress",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "Gel Plush Comfort"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Ortho Mattress",
+          "discount": "15",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "15"
+            },
+            {
+              "field": "Name",
+              "value": "gel plush ortho"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-10-24T15:54:17.362Z"
+}
