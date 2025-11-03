@@ -649,7 +649,7 @@ app.post("/logout", (req, res) => {
 /* -----------------------------
    Static pages
 ------------------------------*/
-app.get("/home.html", authMiddleware, (req, res) => {
+ app.get("/home.html", authMiddleware, (req, res) => {
   res.sendFile(join(__dirname, "public", "home.html"));
 });
 
@@ -660,6 +660,10 @@ app.get("/", (req, res) => {
 app.get("/fieldmap", authMiddleware, (req, res) => {
   res.json(fieldMap);
 });
+
+
+
+
 /* -----------------------------
    GitHub Issues Integration
 ------------------------------*/
@@ -816,6 +820,120 @@ app.post("/issues/:number/comment", async (req, res) => {
   }
 });
 
+
+app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const user = req.session.user;
+  const envConfig = getEnvConfig(req);
+
+  try {
+    const results = {
+      id,
+      purchasePrice: null,
+      history: [],
+      debug: {}
+    };
+
+    // --- 1️⃣ Fetch current purchase price ---
+    const itemUrl = `${envConfig.restUrl}/inventoryItem/${id}`;
+    const itemRes = await fetch(itemUrl, {
+      method: "GET",
+      headers: {
+        ...getAuthHeader(itemUrl, "GET", user.tokenId, user.tokenSecret, envConfig),
+        "Content-Type": "application/json"
+      }
+    });
+
+    const itemText = await itemRes.text();
+    let itemData;
+    try { itemData = JSON.parse(itemText); } catch { itemData = { raw: itemText }; }
+
+    results.purchasePrice = itemData?.cost ?? null;
+
+    // --- 2️⃣ SuiteQL Join with safer casting and fallbacks ---
+    const suiteQL = `
+      SELECT
+        TO_CHAR(sn.date, 'YYYY-MM-DD HH24:MI:SS') AS date,
+        sn.name AS user,
+        sn.field,
+        sn.oldvalue AS old_version_id,
+        sn.newvalue AS new_version_id,
+        COALESCE(iph.pricelevel, '—') AS pricelevel,
+        COALESCE(iph.currency, '—') AS currency,
+        COALESCE(iph.price, NULL) AS price,
+        COALESCE(iph.discount, '—') AS discount,
+        COALESCE(iph.minimumquantity, '—') AS minqty
+      FROM systemnote sn
+      LEFT JOIN itempricelisthistory iph
+        ON TO_CHAR(iph.version) = sn.newvalue
+      WHERE sn.recordid = ${id}
+        AND sn.field = 'INVTITEM.PRICELIST'
+      ORDER BY sn.date DESC
+      FETCH NEXT 20 ROWS ONLY
+    `;
+
+    const suiteQLUrl =
+      envConfig.restUrl.replace(/\/record\/v1$/i, "") + "/query/v1/suiteql";
+
+    console.log("➡️ SuiteQL query:", suiteQLUrl);
+
+    const queryRes = await fetch(suiteQLUrl, {
+      method: "POST",
+      headers: {
+        ...getAuthHeader(suiteQLUrl, "POST", user.tokenId, user.tokenSecret, envConfig),
+        "Content-Type": "application/json",
+        "Prefer": "transient"
+      },
+      body: JSON.stringify({ q: suiteQL })
+    });
+
+    const queryText = await queryRes.text();
+    console.log("⬅️ SuiteQL HTTP", queryRes.status, "| length:", queryText.length);
+    console.log("📄 Raw snippet:", queryText.slice(0, 400));
+
+    let queryJson;
+    try { queryJson = JSON.parse(queryText); } catch { queryJson = { raw: queryText }; }
+
+    // --- 3️⃣ Parse & format data ---
+    if (Array.isArray(queryJson?.items)) {
+      results.history = queryJson.items.map((r) => ({
+        Date: r.date || "—",
+        User: r.user || "—",
+        Field: "Pricing / Base Price",
+        PriceLevel: r.pricelevel || "—",
+        Currency: r.currency || "—",
+        Price: r.price ? Number(r.price).toFixed(2) : "—",
+        Discount: r.discount || "—",
+        MinQty: r.minqty || "—",
+        OldVersion: r.old_version_id || "—",
+        NewVersion: r.new_version_id || "—"
+      }));
+    }
+
+    // --- 4️⃣ Debug information for inspection ---
+    results.debug.suiteql = {
+      status: queryRes.status,
+      url: suiteQLUrl,
+      query: suiteQL,
+      totalCount: queryJson?.count || 0,
+      fieldSample: queryJson?.items?.slice(0, 3) || []
+    };
+
+    // --- 5️⃣ Return final JSON ---
+    res.json({
+      success: true,
+      purchasePrice: results.purchasePrice,
+      totalRecords: queryJson?.count || results.history.length,
+      returnedRecords: results.history.length,
+      history: results.history,
+      debug: results.debug
+    });
+
+  } catch (err) {
+    console.error("❌ Historical pricing API error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 
 

@@ -1,0 +1,17 @@
+.pricing-container {
+  padding: 1rem 2rem;
+}
+.history-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 1rem;
+}
+.history-table th,
+.history-table td {
+  border: 1px solid #ddd;
+  padding: 0.5rem;
+  text-align: left;
+}
+.history-table th {
+  background-color: #f2f2f2;
+}
