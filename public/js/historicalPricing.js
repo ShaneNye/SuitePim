@@ -1,176 +1,112 @@
-// public/js/historicalPricing.js
-const API_BASE = "http://localhost:3000";
+// /public/js/historicalPricing.js
+console.log("✅ historicalPricing.js loaded");
 
-async function loadHistoricalPricing() {
-  const container = document.createElement("div");
-  container.className = "pricing-container";
-  document.body.insertBefore(container, document.getElementById("footer-container"));
-
-  // --- Input controls ---
-  const inputWrap = document.createElement("div");
-  inputWrap.className = "input-wrap";
-  inputWrap.innerHTML = `
-    <label for="itemId"><strong>Enter Item Internal ID:</strong></label>
-    <input id="itemId" type="text" placeholder="e.g. 2660" />
-    <button id="fetchBtn">Fetch History</button>
-  `;
-  container.appendChild(inputWrap);
-
-  const resultWrap = document.createElement("div");
-  resultWrap.id = "resultWrap";
-  resultWrap.innerHTML = `<p>Enter an Item ID and click <strong>Fetch History</strong>.</p>`;
-  container.appendChild(resultWrap);
-
-  document.getElementById("fetchBtn").addEventListener("click", async () => {
-    const id = document.getElementById("itemId").value.trim();
-    if (!id) return alert("Please enter an Internal ID.");
-
-    resultWrap.innerHTML = `<p>Loading...</p>`;
-    try {
-      const res = await fetch(`${API_BASE}/api/item/${id}/history`);
-      const data = await res.json();
-
-      if (!data.success) {
-        resultWrap.innerHTML = `<p style="color:red;">❌ ${data.error || "Failed to load data"}</p>`;
-        return;
-      }
-
-      renderPricingHistory(resultWrap, id, data);
-    } catch (err) {
-      resultWrap.innerHTML = `<p style="color:red;">❌ Error fetching data: ${err.message}</p>`;
-    }
-  });
-}
-
-// --- UI Rendering Function ---
-function renderPricingHistory(resultWrap, id, data) {
-  resultWrap.innerHTML = `
-    <h2>Item ID: ${id}</h2>
-    <p><strong>Current Purchase Price:</strong> £${data.purchasePrice ?? "N/A"}</p>
-    <p><strong>Total Records:</strong> ${data.totalRecords}</p>
-    <hr />
-  `;
-
-  if (!Array.isArray(data.history) || data.history.length === 0) {
-    resultWrap.innerHTML += `<p>No historical pricing records found.</p>`;
-    return;
+// Open modal to name file
+export function openHistoricalPricingModal(data) {
+  let modal = document.getElementById("historical-pricing-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "historical-pricing-modal";
+    modal.className = "modal hidden";
+    modal.innerHTML = `
+      <div class="modal-content">
+        <h3>Save Historical Pricing Snapshot</h3>
+        <label>File name:</label>
+        <input id="hp-filename" type="text" placeholder="e.g. pricing_november_2025" style="width:100%;margin:8px 0;padding:6px;"/>
+        <div class="modal-actions">
+          <button id="hp-cancel" class="btn">Cancel</button>
+          <button id="hp-save" class="btn primary">Save</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
   }
 
-  // --- Build Pricing Table ---
-  const table = document.createElement("table");
-  table.className = "history-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Date</th>
-        <th>User</th>
-        <th>Field</th>
-        <th>Price Level</th>
-        <th>Currency</th>
-        <th>Price (£)</th>
-        <th>Discount %</th>
-        <th>Min Qty</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${data.history
-        .map(
-          (row) => `
-          <tr>
-            <td>${row.Date}</td>
-            <td>${row.User}</td>
-            <td>${row.Field}</td>
-            <td>${row.PriceLevel}</td>
-            <td>${row.Currency}</td>
-            <td>${row.Price}</td>
-            <td>${row.Discount}</td>
-            <td>${row.MinQty}</td>
-          </tr>`
-        )
-        .join("")}
-    </tbody>
-  `;
-  resultWrap.appendChild(table);
+  const input = modal.querySelector("#hp-filename");
+  const cancel = modal.querySelector("#hp-cancel");
+  const save = modal.querySelector("#hp-save");
 
-  // --- Optional Debug Section ---
-  const debugToggle = document.createElement("button");
-  debugToggle.textContent = "Show Debug Info";
-  debugToggle.className = "debug-toggle";
+  modal.classList.remove("hidden");
+  input.focus();
 
-  const debugDiv = document.createElement("pre");
-  debugDiv.className = "debug-info hidden";
-  debugDiv.textContent = JSON.stringify(data.debug, null, 2);
+  cancel.onclick = () => modal.classList.add("hidden");
+  save.onclick = async () => {
+    const fileName = input.value.trim().replace(/\s+/g, "_").toLowerCase();
+    if (!fileName) {
+      alert("Please enter a file name");
+      return;
+    }
 
-  debugToggle.addEventListener("click", () => {
-    const isHidden = debugDiv.classList.contains("hidden");
-    debugDiv.classList.toggle("hidden", !isHidden);
-    debugToggle.textContent = isHidden ? "Hide Debug Info" : "Show Debug Info";
-  });
+    modal.classList.add("hidden");
 
-  resultWrap.appendChild(debugToggle);
-  resultWrap.appendChild(debugDiv);
+    // Only include key fields
+    const reduced = data.map((row) => ({
+      "Internal ID": row["Internal ID"],
+      "Name": row["Name"],
+      "Purchase Price": row["Purchase Price"],
+      "Base Price": row["Base Price"],
+    }));
+
+    try {
+      const res = await fetch("/api/savePromotion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName,
+          content: JSON.stringify(reduced, null, 2),
+        }),
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        alert(`✅ Historical pricing saved as ${fileName}.json`);
+      } else {
+        console.error("Save failed:", json);
+        alert("❌ Failed to save file: " + (json.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Error saving historical pricing:", err);
+      alert("❌ Save error — see console");
+    }
+  };
 }
-
-// --- Basic Styling ---
+// Ensure modal displays correctly above footer
 const style = document.createElement("style");
 style.textContent = `
-  .pricing-container {
-    padding: 1rem 2rem;
-    max-width: 1100px;
-    margin: auto;
+  #historical-pricing-modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999; /* bring above footer & table */
   }
-  .input-wrap {
-    margin-bottom: 1.5rem;
+
+  #historical-pricing-modal.hidden {
+    display: none;
   }
-  #itemId {
-    width: 120px;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-    padding: 0.3rem 0.5rem;
+
+  #historical-pricing-modal .modal-content {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: modalPop 0.2s ease-out;
   }
-  #fetchBtn {
-    padding: 0.4rem 0.8rem;
-    background-color: #FFD700;;
-    color: black;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+
+  #historical-pricing-modal .modal-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
   }
-  #fetchBtn:hover {
-    background-color: #00695C;
+
+  @keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
   }
-  .history-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-    font-size: 0.9rem;
-  }
-  .history-table th, .history-table td {
-    border: 1px solid #ddd;
-    padding: 6px 10px;
-    text-align: left;
-  }
-  .history-table th {
-    background-color: #f2f2f2;
-  }
-  .debug-toggle {
-    margin-top: 1rem;
-    padding: 0.4rem 0.8rem;
-    background-color: #ccc;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .debug-info {
-    background-color: #f5f5f5;
-    border: 1px solid #ccc;
-    padding: 1rem;
-    margin-top: 0.5rem;
-    font-size: 0.8rem;
-    overflow-x: auto;
-  }
-  .hidden { display: none; }
 `;
 document.head.appendChild(style);
-
-window.addEventListener("DOMContentLoaded", loadHistoricalPricing);

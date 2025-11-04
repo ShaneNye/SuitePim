@@ -834,7 +834,7 @@ app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
       debug: {}
     };
 
-    // --- 1️⃣ Fetch current purchase price ---
+    // --- 1️⃣ Get current purchase price ---
     const itemUrl = `${envConfig.restUrl}/inventoryItem/${id}`;
     const itemRes = await fetch(itemUrl, {
       method: "GET",
@@ -850,32 +850,23 @@ app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
 
     results.purchasePrice = itemData?.cost ?? null;
 
-    // --- 2️⃣ SuiteQL Join with safer casting and fallbacks ---
+    // --- 2️⃣ Query System Notes (SuiteQL) for price-related changes ---
     const suiteQL = `
       SELECT
-        TO_CHAR(sn.date, 'YYYY-MM-DD HH24:MI:SS') AS date,
-        sn.name AS user,
-        sn.field,
-        sn.oldvalue AS old_version_id,
-        sn.newvalue AS new_version_id,
-        COALESCE(iph.pricelevel, '—') AS pricelevel,
-        COALESCE(iph.currency, '—') AS currency,
-        COALESCE(iph.price, NULL) AS price,
-        COALESCE(iph.discount, '—') AS discount,
-        COALESCE(iph.minimumquantity, '—') AS minqty
-      FROM systemnote sn
-      LEFT JOIN itempricelisthistory iph
-        ON TO_CHAR(iph.version) = sn.newvalue
-      WHERE sn.recordid = ${id}
-        AND sn.field = 'INVTITEM.PRICELIST'
-      ORDER BY sn.date DESC
-      FETCH NEXT 20 ROWS ONLY
+        TO_CHAR(date, 'YYYY-MM-DD HH24:MI:SS') AS date,
+        name AS user,
+        field,
+        oldvalue,
+        newvalue
+      FROM systemnote
+      WHERE recordid = ${id}
+        AND field IN ('INVTITEM.PRICELIST', 'INVTITEM.COST')
+      ORDER BY date DESC
+      FETCH NEXT 50 ROWS ONLY
     `;
 
-    const suiteQLUrl =
-      envConfig.restUrl.replace(/\/record\/v1$/i, "") + "/query/v1/suiteql";
-
-    console.log("➡️ SuiteQL query:", suiteQLUrl);
+    const suiteQLUrl = envConfig.restUrl.replace(/\/record\/v1$/i, "") + "/query/v1/suiteql";
+    console.log("➡️ SuiteQL query (audit trail):", suiteQLUrl);
 
     const queryRes = await fetch(suiteQLUrl, {
       method: "POST",
@@ -888,53 +879,44 @@ app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
     });
 
     const queryText = await queryRes.text();
-    console.log("⬅️ SuiteQL HTTP", queryRes.status, "| length:", queryText.length);
-    console.log("📄 Raw snippet:", queryText.slice(0, 400));
-
     let queryJson;
     try { queryJson = JSON.parse(queryText); } catch { queryJson = { raw: queryText }; }
 
-    // --- 3️⃣ Parse & format data ---
+    results.debug.queryStatus = queryRes.status;
+    results.debug.querySnippet = queryText.slice(0, 400);
+
     if (Array.isArray(queryJson?.items)) {
-      results.history = queryJson.items.map((r) => ({
-        Date: r.date || "—",
-        User: r.user || "—",
-        Field: "Pricing / Base Price",
-        PriceLevel: r.pricelevel || "—",
-        Currency: r.currency || "—",
-        Price: r.price ? Number(r.price).toFixed(2) : "—",
-        Discount: r.discount || "—",
-        MinQty: r.minqty || "—",
-        OldVersion: r.old_version_id || "—",
-        NewVersion: r.new_version_id || "—"
-      }));
+      results.history = queryJson.items.map((r) => {
+        const fieldName =
+          r.field === "INVTITEM.PRICELIST"
+            ? "Base Price"
+            : r.field === "INVTITEM.COST"
+            ? "Purchase Price"
+            : r.field;
+
+        return {
+          Date: r.date,
+          User: r.user,
+          Field: fieldName,
+          OldValue: r.oldvalue,
+          NewValue: r.newvalue
+        };
+      });
     }
 
-    // --- 4️⃣ Debug information for inspection ---
-    results.debug.suiteql = {
-      status: queryRes.status,
-      url: suiteQLUrl,
-      query: suiteQL,
-      totalCount: queryJson?.count || 0,
-      fieldSample: queryJson?.items?.slice(0, 3) || []
-    };
-
-    // --- 5️⃣ Return final JSON ---
+    // --- 3️⃣ Return the data ---
     res.json({
       success: true,
       purchasePrice: results.purchasePrice,
-      totalRecords: queryJson?.count || results.history.length,
-      returnedRecords: results.history.length,
+      totalRecords: results.history.length,
       history: results.history,
       debug: results.debug
     });
-
   } catch (err) {
     console.error("❌ Historical pricing API error:", err);
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
 
 
 /* -----------------------------

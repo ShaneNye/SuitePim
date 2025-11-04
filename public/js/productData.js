@@ -1,5 +1,7 @@
 // ProductData.js
 import { fieldMap } from "./fieldMap.js";
+import { openHistoricalPricingModal } from "./historicalPricing.js";
+
 
 const SANDBOXjsonUrl =
   "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4058&deploy=2&compid=7972741_SB1&ns-at=AAEJ7tMQ-74HtNHaDkUIVEeh7BJ5FkmE6ELyzq7-HDyCsW7QtU4";
@@ -106,6 +108,29 @@ async function loadJSONData() {
     renderUpdateButton(panelsParent);
     renderPushButton(panelsParent);
 
+// after renderPushButton(panelsParent);
+renderHistoricalPricingButton(panelsParent);
+
+function renderHistoricalPricingButton(parent) {
+  const btn = document.createElement("button");
+  btn.textContent = "Historical Pricing";
+  btn.style.padding = "0.5rem 1rem";
+  btn.style.border = "none";
+  btn.style.borderRadius = "4px";
+  btn.style.cursor = "pointer";
+
+  btn.addEventListener("click", () => {
+    if (window.filteredData && window.filteredData.length > 0) {
+      openHistoricalPricingModal(window.filteredData);
+    } else {
+      alert("No product data available to export.");
+    }
+  });
+
+  parent.appendChild(btn);
+}
+
+
     // --- 4) Build table
     await displayJSONTable(filteredData);
 
@@ -125,6 +150,11 @@ async function loadJSONData() {
       .forEach((panel) => panel.classList.add("collapsed"));
     document.querySelectorAll(".filter-panel-header")
       .forEach((header) => header.classList.add("collapsed"));
+
+      // ✅ Expose product data globally so other scripts (like historicalPricing.js) can access it
+window.filteredData = filteredData;
+window.fullData = fullData;
+
 
   } catch (error) {
     console.error("Error loading data:", error);
