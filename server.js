@@ -200,10 +200,30 @@ app.use(
   })
 );
 
+
+function authMiddleware(req, res, next) {
+  if (req.session.user) return next();
+
+  // If it's an API call, return JSON instead of redirecting
+  if (req.originalUrl.startsWith("/api/") || req.originalUrl.startsWith("/push-")) {
+    return res.status(401).json({ success: false, message: "Unauthorized - please log in" });
+  }
+
+  // Otherwise redirect to login
+  return res.redirect("/");
+}
+
+
+/*
+
+OLD AUTH MIDDLEARE FUNCTION
+
 function authMiddleware(req, res, next) {
   if (req.session.user) next();
   else res.redirect("/");
-}
+} 
+
+*/
 
 /* -----------------------------
    Auth
@@ -633,6 +653,178 @@ app.get("/api/promotions/:name", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+// --- LIST PRICING SNAPSHOTS (auto-cleanup files older than 90 days) ---
+app.get("/api/pricing", async (req, res) => {
+  try {
+    const apiUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/pricing`;
+    const ghRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    });
+
+    if (!ghRes.ok) {
+      const err = await ghRes.text();
+      console.error("❌ Failed to fetch pricing list:", err);
+      return res.status(500).json({ error: "Failed to fetch pricing" });
+    }
+
+    const files = await ghRes.json();
+    if (!Array.isArray(files)) return res.json([]);
+
+    const now = Date.now();
+    const ninetyDays = 90 * 24 * 60 * 60 * 1000;
+    const pricingFiles = [];
+
+    for (const f of files) {
+      if (!f.name.endsWith(".json")) continue;
+
+      let deleteThis = false;
+
+      try {
+        // Get the last commit date for this file
+        const commitsUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/commits?path=${encodeURIComponent(
+          f.path
+        )}&per_page=1`;
+        const commitRes = await fetch(commitsUrl, {
+          headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+        });
+
+        if (commitRes.ok) {
+          const commits = await commitRes.json();
+          if (Array.isArray(commits) && commits.length > 0) {
+            const commitDate = new Date(
+              commits[0].commit.committer.date
+            ).getTime();
+            const age = now - commitDate;
+            if (age > ninetyDays) {
+              deleteThis = true;
+            }
+          }
+        }
+      } catch (metaErr) {
+        console.warn(`⚠️ Could not check age for ${f.path}:`, metaErr);
+      }
+
+      if (deleteThis) {
+        console.log(`🧹 Auto-deleting historical file older than 90 days: ${f.path}`);
+        await deleteGitHubFile(f.path);
+        continue; // skip adding to list
+      }
+
+      pricingFiles.push({
+        name: f.name.replace(".json", ""),
+        path: f.path,
+      });
+    }
+
+    res.json(pricingFiles);
+  } catch (err) {
+    console.error("❌ Error listing pricing files:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+// --- GET SINGLE PRICING SNAPSHOT ---
+app.get("/api/pricing/:name", async (req, res) => {
+  try {
+    const { name } = req.params;
+    const path = `pricing/${name}.json`;
+    const apiUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/${path}`;
+
+    const ghRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    });
+
+    if (!ghRes.ok) {
+      const err = await ghRes.text();
+      console.error("❌ Failed to fetch pricing snapshot:", ghRes.status, err);
+      return res.status(ghRes.status).json({
+        error: "Failed to fetch pricing file",
+        status: ghRes.status,
+        details: err
+      });
+    }
+
+    const file = await ghRes.json();
+
+    // ✅ Case 1: small files (content inline)
+    if (file.content && file.encoding === "base64") {
+      const content = Buffer.from(file.content, "base64").toString("utf-8");
+      return res.json(JSON.parse(content));
+    }
+
+    // ✅ Case 2: large files (use download_url)
+    if (file.download_url) {
+      const rawRes = await fetch(file.download_url);
+      if (!rawRes.ok) throw new Error("Failed to fetch raw file content");
+      const text = await rawRes.text();
+      return res.json(JSON.parse(text));
+    }
+
+    throw new Error("File has no content or download URL");
+  } catch (err) {
+    console.error("❌ Error fetching pricing file:", err);
+    res.status(500).json({ error: "Server error", details: String(err) });
+  }
+});
+
+
+
+
+
+
+// --- SAVE PRICING SNAPSHOT ---
+app.post("/api/savePricingSnapshot", async (req, res) => {
+  try {
+    const { fileName, content } = req.body;
+    if (!fileName || !content) {
+      return res.status(400).json({ error: "Missing fileName or content" });
+    }
+
+    // Save to "pricing" folder instead of "promotions"
+    const path = `pricing/${fileName}.json`;
+    const apiUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/${path}`;
+
+    // Check if file already exists (so we can include SHA if updating)
+    let sha = null;
+    const existingRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    });
+    if (existingRes.ok) {
+      const existing = await existingRes.json();
+      sha = existing.sha;
+    }
+
+    // Commit file to GitHub
+    const ghRes = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        Authorization: `token ${process.env.GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+        Accept: "application/vnd.github+json",
+      },
+      body: JSON.stringify({
+        message: `Save pricing snapshot ${fileName}.json`,
+        content: Buffer.from(content).toString("base64"),
+        sha,
+      }),
+    });
+
+    const data = await ghRes.json();
+
+    if (!ghRes.ok) {
+      console.error("❌ GitHub save failed:", data);
+      return res.status(500).json({ error: "GitHub save failed", details: data });
+    }
+
+    res.json({ success: true, file: data.content.path });
+  } catch (err) {
+    console.error("❌ Save pricing snapshot error:", err);
+    res.status(500).json({ error: "Server error", details: String(err) });
+  }
+});
+
 
 
 
@@ -1282,8 +1474,30 @@ async function runNextJob() {
 
   console.log(`\n📊 Job Summary: ✅ ${successCount} | ❌ ${errorCount} | ⚠️ ${skippedCount}\n`);
 
-  runNextJob();
+  // ✅ Perform cleanup BEFORE starting the next job
+  if (job.type === "historical-pricing") {
+    if (job.originalFilePath) {
+      console.log(`🧹 Attempting to delete processed historical file: ${job.originalFilePath}`);
+
+      try {
+        const deleted = await deleteGitHubFile(job.originalFilePath);
+        if (deleted) {
+          console.log(`✅ Historical pricing file removed: ${job.originalFilePath}`);
+        } else {
+          console.warn(`⚠️ Could not delete historical pricing file: ${job.originalFilePath}`);
+        }
+      } catch (err) {
+        console.error(`❌ Error deleting historical pricing file: ${err.message}`);
+      }
+    } else {
+      console.warn("⚠️ Historical pricing job had no originalFilePath set.");
+    }
+  }
+
+  // ✅ Now safely run the next job in sequence
+  await runNextJob();
 }
+
 
 
 
@@ -1322,6 +1536,110 @@ app.post("/push-updates", authMiddleware, (req, res) => {
     queueTotal: jobQueue.length,
   });
 });
+
+app.post("/push-pricing", authMiddleware, (req, res) => {
+  const { rows, fileName } = req.body; // ✅ receive fileName from frontend
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return res.status(400).json({ success: false, message: "No rows to push" });
+  }
+
+  const jobId = createJobId();
+  const envConfig = getEnvConfig(req);
+  const environment = req.session.environment || "Sandbox";
+
+  jobs[jobId] = {
+    type: "historical-pricing",
+    status: "pending",
+    total: rows.length,
+    processed: 0,
+    results: [],
+    rows,
+    user: req.session.user,
+    envConfig,
+    environment,
+    createdAt: new Date(),
+    // ✅ store file path for cleanup
+    originalFilePath: fileName ? `pricing/${fileName}.json` : null,
+  };
+
+  jobQueue.push(jobId);
+  if (jobQueue.length === 1) runNextJob();
+
+  console.log(`📦 Queued historical pricing job ${jobId} for file: ${jobs[jobId].originalFilePath}`);
+  res.json({
+    success: true,
+    message: `Historical pricing job queued with ${rows.length} row(s)`,
+    jobId,
+    queuePos: jobQueue.indexOf(jobId) + 1,
+    queueTotal: jobQueue.length,
+  });
+});
+
+
+// --- DELETE FILE FROM GITHUB REPO (safe + verbose) ---
+async function deleteGitHubFile(filePath) {
+  try {
+    // 🧩 Normalize path and extension
+    if (!filePath) {
+      console.warn("⚠️ deleteGitHubFile called without filePath");
+      return false;
+    }
+    if (!filePath.startsWith("pricing/")) {
+      filePath = `pricing/${filePath}`;
+    }
+    if (!filePath.endsWith(".json")) {
+      filePath = `${filePath}.json`;
+    }
+
+    const apiUrl = `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/contents/${filePath}`;
+    console.log(`🧾 [deleteGitHubFile] Target: ${apiUrl}`);
+
+    // Step 1: get file SHA
+    const ghRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    });
+
+    if (!ghRes.ok) {
+      const text = await ghRes.text();
+      console.warn(`⚠️ File not found or cannot fetch SHA for ${filePath} — ${text}`);
+      return false;
+    }
+
+    const file = await ghRes.json();
+    const sha = file.sha;
+    if (!sha) {
+      console.error(`❌ No SHA returned for ${filePath}`);
+      return false;
+    }
+
+    // Step 2: delete file via API
+    const deleteRes = await fetch(apiUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: `token ${process.env.GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `🧹 Delete processed historical pricing file: ${filePath}`,
+        sha,
+      }),
+    });
+
+    if (!deleteRes.ok) {
+      const errText = await deleteRes.text();
+      console.error(`❌ GitHub delete failed for ${filePath}: ${errText}`);
+      return false;
+    }
+
+    console.log(`✅ GitHub file deleted successfully: ${filePath}`);
+    return true;
+  } catch (err) {
+    console.error(`❌ Error deleting GitHub file (${filePath}):`, err);
+    return false;
+  }
+}
+
+
 
 // enqueue validation job
 app.post("/push-validation", authMiddleware, (req, res) => {

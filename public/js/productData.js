@@ -816,6 +816,7 @@ function applyFilters() {
   const tbody = document.querySelector("#filter-tbody");
   if (!tbody) {
     filteredData = [...fullData];
+    window.filteredData = filteredData;
     displayJSONTable(filteredData, { showAll: false }); // no filters → cap 500
     return;
   }
@@ -850,6 +851,7 @@ function applyFilters() {
   if (rules.length === 0) {
     // --- No filters → reset to 500 row cap
     filteredData = [...fullData];
+    window.filteredData = filteredData;
     displayJSONTable(filteredData, { showAll: false });
     return;
   }

@@ -1,17 +1,151 @@
-.pricing-container {
-  padding: 1rem 2rem;
+/* === Layout === */
+body {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f8fafc;
+  color: #222;
 }
-.history-table {
+
+.historical-container {
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px 60px;
+}
+
+.page-title h1 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #0081AB;
+  margin-bottom: 25px;
+  text-align: center;
+}
+
+/* === Header bar === */
+.historical-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dce4e8;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-left label {
+  font-weight: 500;
+  color: #333;
+}
+
+#pricing-files {
+  padding: 6px 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#pricing-files:focus {
+  outline: none;
+  border-color: #0081AB;
+  box-shadow: 0 0 4px rgba(0, 129, 171, 0.4);
+}
+
+/* === Push Button === */
+.btn.primary {
+  background-color: #0081AB;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn.primary:hover {
+  background-color: #00739a;
+}
+
+.btn.primary:disabled {
+  background-color: #c7c7c7;
+  cursor: not-allowed;
+}
+
+.btn.primary:active {
+  transform: scale(0.98);
+}
+
+/* === Table === */
+#pricing-table-container {
+  background: #fff;
+  border: 1px solid #e2e6ea;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.pricing-table {
   border-collapse: collapse;
   width: 100%;
-  margin-top: 1rem;
+  margin-top: 10px;
+  font-size: 0.95rem;
 }
-.history-table th,
-.history-table td {
-  border: 1px solid #ddd;
-  padding: 0.5rem;
+
+.pricing-table th,
+.pricing-table td {
+  border: 1px solid #e5e9ec;
+  padding: 10px 12px;
   text-align: left;
 }
-.history-table th {
-  background-color: #f2f2f2;
+
+.pricing-table th {
+  background-color: #e6f4fa;
+  color: #004b66;
+  font-weight: 600;
+}
+
+.pricing-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.pricing-table tbody tr:hover {
+  background-color: #d8eff8;
+  transition: background 0.15s ease-in-out;
+}
+
+.pricing-table td {
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* === No Data / Messages === */
+#pricing-table-container p {
+  text-align: center;
+  padding: 20px;
+  color: #555;
+  font-size: 1rem;
+}
+
+/* === Subtle animation for table === */
+.pricing-table {
+  opacity: 0;
+  transform: translateY(6px);
+  animation: fadeInTable 0.3s ease forwards;
+}
+
+@keyframes fadeInTable {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

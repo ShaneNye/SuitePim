@@ -1,7 +1,7 @@
 // /public/js/historicalPricing.js
 console.log("✅ historicalPricing.js loaded");
 
-// Open modal to name file
+// --- OPEN MODAL TO SAVE HISTORICAL PRICING SNAPSHOT ---
 export function openHistoricalPricingModal(data) {
   let modal = document.getElementById("historical-pricing-modal");
   if (!modal) {
@@ -30,6 +30,7 @@ export function openHistoricalPricingModal(data) {
   input.focus();
 
   cancel.onclick = () => modal.classList.add("hidden");
+
   save.onclick = async () => {
     const fileName = input.value.trim().replace(/\s+/g, "_").toLowerCase();
     if (!fileName) {
@@ -39,16 +40,42 @@ export function openHistoricalPricingModal(data) {
 
     modal.classList.add("hidden");
 
-    // Only include key fields
-    const reduced = data.map((row) => ({
+    // ✅ Step 1: Prefer data currently visible in the rendered table
+    let visibleData = [];
+    const table = document.querySelector("table.csv-table");
+    if (table) {
+      const rows = Array.from(table.querySelectorAll("tbody tr"));
+      const headers = Array.from(
+        table.querySelectorAll("thead th")
+      ).map((th) => th.textContent.trim());
+
+      rows.forEach((row) => {
+        const obj = {};
+        const cells = Array.from(row.querySelectorAll("td")).slice(1); // skip selector column
+        headers.slice(1).forEach((header, i) => {
+          const el = cells[i]?.querySelector("input, select, textarea");
+          obj[header] = el ? el.value : cells[i]?.textContent.trim();
+        });
+        visibleData.push(obj);
+      });
+    }
+
+    // ✅ Step 2: Fallback to global filteredData if no table found
+    if (!visibleData.length && window.filteredData?.length) {
+      visibleData = window.filteredData;
+    }
+
+    // ✅ Step 3: Reduce to required key fields only
+    const reduced = visibleData.map((row) => ({
       "Internal ID": row["Internal ID"],
       "Name": row["Name"],
       "Purchase Price": row["Purchase Price"],
       "Base Price": row["Base Price"],
     }));
 
+    // ✅ Step 4: Send to backend for GitHub commit (into /pricing folder)
     try {
-      const res = await fetch("/api/savePromotion", {
+      const res = await fetch("/api/savePricingSnapshot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -70,7 +97,8 @@ export function openHistoricalPricingModal(data) {
     }
   };
 }
-// Ensure modal displays correctly above footer
+
+// --- STYLE INJECTION (blue scheme / #0081AB) ---
 const style = document.createElement("style");
 style.textContent = `
   #historical-pricing-modal {
@@ -81,7 +109,7 @@ style.textContent = `
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999; /* bring above footer & table */
+    z-index: 9999;
   }
 
   #historical-pricing-modal.hidden {
@@ -102,6 +130,35 @@ style.textContent = `
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+  }
+
+  #historical-pricing-modal input[type="text"] {
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+
+  .btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: #f4f4f4;
+    cursor: pointer;
+  }
+
+  .btn.primary {
+    background: #0081AB;
+    color: #fff;
+    border: none;
+  }
+
+  .btn.primary:hover {
+    background: #00739a;
+  }
+
+  .btn.primary:disabled {
+    background: #c7c7c7;
+    cursor: not-allowed;
   }
 
   @keyframes modalPop {
