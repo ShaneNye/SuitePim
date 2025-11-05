@@ -15,7 +15,7 @@ const environment = localStorage.getItem("environment") || "Sandbox";
 const jsonUrl =
   environment.toLowerCase() === "production" ? PRODjsonUrl : SANDBOXjsonUrl;
 
-const MAX_ROWS = 100;
+const MAX_ROWS = 25;
 
 
 
