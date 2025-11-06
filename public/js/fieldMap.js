@@ -68,7 +68,7 @@ function urlFor(name) {
 // == product Development fields //
 export const fieldMap = [
   { name: "Internal ID", disableField: true},
-  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text", disableField: true},
+  { name: "Name", internalid: "itemid", fieldType: "Free-Form Text"},
   { name: "Display Name", internalid: "displayname", fieldType: "Free-Form Text" },
   { name: "Supplier Name", internalid: "vendorname", fieldType: "Free-Form Text" },
   { name: "Class", internalid: "class", fieldType: "List/Record", jsonFeed: urlFor("Class") },
