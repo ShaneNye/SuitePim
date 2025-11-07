@@ -2317,7 +2317,7 @@ function highlightRow(checkboxOrRow) {
   }
 }
 
-const API_BASE = "http://localhost:3000"; // ✅ backend server
+const API_BASE = "https://suitepim.onrender.com"; // ✅ backend server
 
 async function pushUpdates() {
   const table = document.querySelector("table.csv-table");
