@@ -2321,7 +2321,11 @@ const API_BASE = "https://suitepim.onrender.com"; // ✅ backend server
 
 async function pushUpdates() {
   const table = document.querySelector("table.csv-table");
-  if (!table) return alert("No table found!");
+  if (!table) {
+    alert("No table found!");
+    console.error("❌ pushUpdates: No table element found in DOM.");
+    return;
+  }
 
   const rows = Array.from(table.querySelectorAll("tr")).slice(1); // skip header
   const rowsToPush = [];
@@ -2331,46 +2335,37 @@ async function pushUpdates() {
     if (!checkbox || !checkbox.checked) return;
 
     const rowData = {};
-
     displayedColumns.forEach((col, colIdx) => {
       const td = row.children[colIdx + 1];
       if (!td) return;
 
       const field = fieldMap.find((f) => f.name === col);
 
+      // --- Handle various field types ---
       if (field && field.fieldType === "List/Record") {
-        // --- Single select ---
         const select = td.querySelector("select");
         if (select) {
           const selectedId = select.value;
           const selectedText = select.options[select.selectedIndex]?.text || "";
-          rowData[col] = selectedText; // keep Name for UI/debug
-          rowData[`${col}_InternalId`] = selectedId; // required by backend
+          rowData[col] = selectedText;
+          rowData[`${col}_InternalId`] = selectedId;
         }
 
       } else if (field && field.fieldType === "multiple-select") {
-        // --- Multi select ---
         const preview = td.querySelector(".multi-select-preview");
         const ids = preview?.dataset.ids ? preview.dataset.ids.split(",") : [];
         const names = preview?.textContent
           ? preview.textContent.split(",").map((s) => s.trim())
           : [];
-
-        rowData[col] = names;             // names for display
-        rowData[`${col}_InternalId`] = ids.map(String); // ✅ ensure IDs are strings
+        rowData[col] = names;
+        rowData[`${col}_InternalId`] = ids.map(String);
 
       } else if (field && field.fieldType === "image") {
-        // --- Image field (Suitelet handles this) ---
         const storedId = td.dataset.internalid || "";
-        const fileName = td.dataset.filename || "";
         const img = td.querySelector("img");
         const url = img ? img.src : "";
-
-        // ✅ Only the InternalId matters for backend → Suitelet will use it
         rowData[`${col}_InternalId`] = storedId ? String(storedId) : "";
-
-        // Optional: keep for UI/debug
-        rowData[col] = fileName;
+        rowData[col] = td.dataset.filename || "";
         rowData[`${col}_Url`] = url;
 
       } else if (field && field.fieldType === "Checkbox") {
@@ -2382,37 +2377,38 @@ async function pushUpdates() {
         rowData[col] = textarea ? textarea.value : td.textContent.trim();
 
       } else if (field && field.fieldType === "rich-text") {
-        // --- Rich text: always grab the raw HTML value ---
         const textarea = td.querySelector("textarea.rich-raw");
-        if (textarea) {
-          rowData[col] = textarea.value;  // send HTML, not preview text
-        } else {
-          // fallback to cell preview if somehow no textarea
-          rowData[col] = td.querySelector(".rich-preview")?.innerHTML || "";
-        }
+        rowData[col] = textarea
+          ? textarea.value
+          : td.querySelector(".rich-preview")?.innerHTML || "";
 
       } else {
-        // Fallback: text/number inputs or static text
         const input = td.querySelector("input");
-        if (input) {
-          rowData[col] = input.value;
-        } else {
-          rowData[col] = td.textContent.trim();
-        }
+        rowData[col] = input ? input.value : td.textContent.trim();
       }
     });
 
     rowsToPush.push(rowData);
   });
 
-  if (rowsToPush.length === 0) return alert("No rows selected to push.");
-
-  console.log("🚀 Payload rows (pre-send):", rowsToPush); // debug
-
-  const progressContainer = document.getElementById("push-progress-container");
-  if (progressContainer) {
-    progressContainer.innerHTML = `<p>Queueing push of ${rowsToPush.length} rows...</p>`;
+  if (rowsToPush.length === 0) {
+    alert("No rows selected to push.");
+    console.warn("⚠️ pushUpdates: No rows were selected for push.");
+    return;
   }
+
+  console.log("🚀 Payload rows (pre-send):", rowsToPush);
+
+  // --- Progress UI ---
+  let progressContainer = document.getElementById("push-progress-container");
+  if (!progressContainer) {
+    console.warn("⚠️ Missing progress container; creating temporary element.");
+    progressContainer = document.createElement("div");
+    progressContainer.id = "push-progress-container";
+    document.body.appendChild(progressContainer);
+  }
+
+  progressContainer.innerHTML = `<p>Queueing push of ${rowsToPush.length} rows...</p>`;
 
   try {
     const response = await fetch(`${API_BASE}/push-updates`, {
@@ -2421,82 +2417,70 @@ async function pushUpdates() {
       body: JSON.stringify({ rows: rowsToPush }),
     });
 
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status} - ${text}`);
+    }
+
     const data = await response.json();
     if (!data.success) {
-      if (progressContainer) {
-        progressContainer.innerHTML = `<p style="color:red;">❌ Failed to queue push: ${data.message}</p>`;
-      }
-      window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
+      progressContainer.innerHTML = `<p style="color:red;">❌ Failed to queue push: ${data.message || "Unknown server error"}</p>`;
+      console.error("❌ Server error response:", data);
+      window.updateFooterProgress?.(0, rowsToPush.length, "error", 0, 0);
       return;
     }
 
+    // --- Queue started successfully ---
     const { jobId, queuePos, queueTotal } = data;
     localStorage.setItem("lastJobId", jobId);
-
-    if (progressContainer) {
-      progressContainer.innerHTML = `<p>🚀 Job queued (Job ${queuePos} of ${queueTotal})</p>`;
-    }
-    window.updateFooterProgress(0, rowsToPush.length, "pending", queuePos, queueTotal);
+    progressContainer.innerHTML = `<p>🚀 Job queued (Job ${queuePos} of ${queueTotal})</p>`;
+    window.updateFooterProgress?.(0, rowsToPush.length, "pending", queuePos, queueTotal);
 
     // --- Poll job status ---
     const interval = setInterval(async () => {
       try {
         const statusRes = await fetch(`${API_BASE}/push-status/${jobId}`);
+        if (!statusRes.ok) throw new Error(`Status HTTP ${statusRes.status}`);
+
         const statusData = await statusRes.json();
-
         if (!statusData || !statusData.status) {
-          if (progressContainer) {
-            progressContainer.innerHTML += `<p style="color:red;">❌ Lost job status</p>`;
-          }
-          window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
-          clearInterval(interval);
-          return;
+          throw new Error("Invalid status response");
         }
 
-        const { status, processed, total, results, queuePos, queueTotal } = statusData;
+        const { status, processed, total, results = [], queuePos, queueTotal } = statusData;
 
-        if (progressContainer) {
-          progressContainer.innerHTML = `<p>Status: ${status} — ${processed}/${total} rows processed</p>`;
-        }
-        window.updateFooterProgress(processed, total, status, queuePos, queueTotal);
+        progressContainer.innerHTML = `<p>Status: ${status} — ${processed}/${total} rows processed</p>`;
+        window.updateFooterProgress?.(processed, total, status, queuePos, queueTotal);
 
         if (status === "completed" || status === "error") {
           clearInterval(interval);
 
           const successCount = results.filter(
-            (r) =>
-              r.status === "Success" ||
-              r.status === 200 ||
-              r.status === 204
+            (r) => r.status === "Success" || r.status === 200 || r.status === 204
           ).length;
-
           const failCount = total - successCount;
 
-          if (progressContainer) {
-            progressContainer.innerHTML += `<p>✅ Push finished. ${successCount} of ${total} rows updated successfully.</p>`;
-            if (failCount > 0) {
-              progressContainer.innerHTML += `<p style="color:red;">❌ ${failCount} row(s) failed to update.</p>`;
-            }
-          }
+          let html = `<p>✅ Push finished. ${successCount} of ${total} rows updated successfully.</p>`;
+          if (failCount > 0) html += `<p style="color:red;">❌ ${failCount} row(s) failed to update.</p>`;
 
-          window.updateFooterProgress(processed, total, status, queuePos, queueTotal);
+          progressContainer.innerHTML = html;
+          window.updateFooterProgress?.(processed, total, status, queuePos, queueTotal);
           localStorage.removeItem("lastJobId");
         }
       } catch (err) {
-        console.error("Polling error:", err);
-        if (progressContainer) {
-          progressContainer.innerHTML += `<p style="color:red;">❌ Error polling job status</p>`;
-        }
-        window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
+        console.error("❌ Polling error:", err);
+        progressContainer.innerHTML += `<p style="color:red;">❌ Error polling job status: ${err.message}</p>`;
+        window.updateFooterProgress?.(0, rowsToPush.length, "error", 0, 0);
         clearInterval(interval);
       }
     }, 3000);
   } catch (err) {
-    console.error("Error starting push:", err);
-    if (progressContainer) {
-      progressContainer.innerHTML = `<p style="color:red;">❌ Push failed: ${err.message}</p>`;
-    }
-    window.updateFooterProgress(0, rowsToPush.length, "error", 0, 0);
+    console.error("❌ Push request failed:", err);
+    let msg = err.message.includes("Failed to fetch")
+      ? "Network/CORS error — your backend may not be reachable or CORS isn’t enabled."
+      : err.message;
+    progressContainer.innerHTML = `<p style="color:red;">❌ Push failed: ${msg}</p>`;
+    window.updateFooterProgress?.(0, rowsToPush.length, "error", 0, 0);
   }
 }
 
