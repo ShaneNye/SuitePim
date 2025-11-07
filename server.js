@@ -94,11 +94,16 @@ const staticPath = path.join(__dirname, "public");
 app.use(express.static(staticPath));
 console.log("📂 Serving static files from:", staticPath);
 
-const publicPath = process.env.NODE_ENV === "development"
-  ? path.join(__dirname, "public")
-  : path.join(process.resourcesPath, "public");
+// ✅ Serve static files safely for both Electron and Render
+const staticBase =
+  process.resourcesPath && fs.existsSync(process.resourcesPath)
+    ? process.resourcesPath
+    : __dirname;
 
+const publicPath = path.join(staticBase, "public");
 app.use("/public", express.static(publicPath));
+console.log("📂 Serving static from:", publicPath);
+
 
 /* -----------------------------
    NetSuite Environment Configs
