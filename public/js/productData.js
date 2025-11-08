@@ -480,7 +480,7 @@ function renderBulkActionPanel(columns, parent) {
   // ✅ Only include fields that are not disabled
   columns.forEach((col) => {
     const field = fieldMap.find((f) => f.name === col);
-    if (field && field.disableField) return; // skip disabled fields
+    if (field && field.disableField) return;
 
     const option = document.createElement("option");
     option.value = col;
@@ -488,36 +488,32 @@ function renderBulkActionPanel(columns, parent) {
     columnSelect.appendChild(option);
   });
 
-  // Numeric input
+  // Inputs and controls
   const valueInput = document.createElement("input");
   valueInput.type = "number";
   valueInput.id = "bulk-value-input";
   valueInput.placeholder = "Enter value";
 
-  // Text input (for Free-Form Text)
   const textInput = document.createElement("input");
   textInput.type = "text";
   textInput.id = "bulk-text-input";
   textInput.placeholder = "Enter text";
   textInput.style.display = "none";
 
-  // Dropdown (for List/Record fields)
   const valueSelect = document.createElement("select");
   valueSelect.id = "bulk-value-select";
   valueSelect.classList.add("theme-select");
   valueSelect.style.display = "none";
 
-  // Action dropdown (for numeric fields only)
   const actionSelect = document.createElement("select");
   actionSelect.id = "bulk-action-select";
   ["Set To", "Add By Value", "Add By Percent"].forEach((action) => {
-    const option = document.createElement("option");
-    option.value = action;
-    option.textContent = action;
-    actionSelect.appendChild(option);
+    const opt = document.createElement("option");
+    opt.value = action;
+    opt.textContent = action;
+    actionSelect.appendChild(opt);
   });
 
-  // ✅ Bulk checkbox control
   const bulkCheckbox = document.createElement("input");
   bulkCheckbox.type = "checkbox";
   bulkCheckbox.id = "bulk-checkbox";
@@ -548,12 +544,12 @@ function renderBulkActionPanel(columns, parent) {
     panelHeader.classList.toggle("collapsed");
   });
 
-  // --- Column change behavior ---
+  // --- Column change logic ---
   columnSelect.addEventListener("change", async () => {
     const col = columnSelect.value;
     const field = fieldMap.find((f) => f.name === col);
 
-    // Reset defaults
+    // reset UI
     valueInput.style.display = "inline-block";
     textInput.style.display = "none";
     actionSelect.style.display = "inline-block";
@@ -561,8 +557,8 @@ function renderBulkActionPanel(columns, parent) {
     bulkCheckbox.style.display = "none";
     bulkCheckboxLabel.style.display = "none";
 
+    // 🔹 LIST/RECORD
     if (field && field.fieldType === "List/Record") {
-      // List/Record dropdown
       valueInput.style.display = "none";
       textInput.style.display = "none";
       actionSelect.style.display = "none";
@@ -577,12 +573,15 @@ function renderBulkActionPanel(columns, parent) {
         valueSelect.appendChild(option);
       });
 
-      applyBtn.onclick = () => {
+      applyBtn.onclick = async () => {
         applyBulkAction(col, valueSelect.value, "Set List Value");
+        await new Promise((r) => setTimeout(r, 100)); // small buffer
+        applyFilters(); // ✅ refresh full dataset
       };
-    } 
+    }
+
+    // 🔹 CHECKBOX
     else if (field && field.fieldType === "Checkbox") {
-      // ✅ Show only checkbox
       valueInput.style.display = "none";
       textInput.style.display = "none";
       actionSelect.style.display = "none";
@@ -590,96 +589,71 @@ function renderBulkActionPanel(columns, parent) {
       bulkCheckbox.style.display = "inline-block";
       bulkCheckboxLabel.style.display = "inline-block";
 
-      applyBtn.onclick = () => {
+      applyBtn.onclick = async () => {
         const isChecked = bulkCheckbox.checked;
         const table = document.querySelector("table.csv-table");
         if (!table) return;
 
         const checkedRowIndices = new Set();
-        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
-        const allChecked = [...allRowCbs].every(cb => cb.checked);
-
         table.querySelectorAll("tr").forEach((row, index) => {
           if (index === 0) return;
-          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
-          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+          const cb = row.querySelector("td input[type='checkbox'].row-selector");
+          if (cb && cb.checked) checkedRowIndices.add(index - 1);
         });
 
         checkedRowIndices.forEach((rowIndex) => {
           filteredData[rowIndex][col] = isChecked;
         });
 
-        displayJSONTable(filteredData, { showAll: true }).then(() => {
-          const newRows = document.querySelectorAll("table.csv-table tr");
-          newRows.forEach((row, index) => {
-            if (index === 0) return;
-            const cb = row.querySelector('td input[type="checkbox"].row-selector');
-            if (cb && checkedRowIndices.has(index - 1)) {
-              cb.checked = true;
-              row.classList.add("selected");
-            }
-          });
-          const selectAll = document.querySelector('input[type="checkbox"].select-all');
-          if (selectAll && allChecked) selectAll.checked = true;
-        });
+        await displayJSONTable(filteredData, { showAll: true });
+        applyFilters(); // ✅ refresh full filtered view
       };
     }
+
+    // 🔹 FREE-FORM TEXT
     else if (field && field.fieldType === "Free-Form Text") {
-      // ✅ Just a text input, no actions
       valueInput.style.display = "none";
       textInput.style.display = "inline-block";
       actionSelect.style.display = "none";
       valueSelect.style.display = "none";
 
-      applyBtn.onclick = () => {
+      applyBtn.onclick = async () => {
         const newText = textInput.value || "";
         const table = document.querySelector("table.csv-table");
         if (!table) return;
 
         const checkedRowIndices = new Set();
-        const allRowCbs = table.querySelectorAll('tr input[type="checkbox"].row-selector');
-        const allChecked = [...allRowCbs].every(cb => cb.checked);
-
         table.querySelectorAll("tr").forEach((row, index) => {
           if (index === 0) return;
-          const checkbox = row.querySelector("td input[type='checkbox'].row-selector");
-          if (checkbox && checkbox.checked) checkedRowIndices.add(index - 1);
+          const cb = row.querySelector("td input[type='checkbox'].row-selector");
+          if (cb && cb.checked) checkedRowIndices.add(index - 1);
         });
 
         checkedRowIndices.forEach((rowIndex) => {
           filteredData[rowIndex][col] = newText;
         });
 
-        // ✅ Updated here — showAll: true
-        displayJSONTable(filteredData, { showAll: true }).then(() => {
-          const newRows = document.querySelectorAll("table.csv-table tr");
-          newRows.forEach((row, index) => {
-            if (index === 0) return;
-            const cb = row.querySelector('td input[type="checkbox"].row-selector');
-            if (cb && checkedRowIndices.has(index - 1)) {
-              cb.checked = true;
-              row.classList.add("selected");
-            }
-          });
-          const selectAll = document.querySelector('input[type="checkbox"].select-all');
-          if (selectAll && allChecked) selectAll.checked = true;
-        });
+        await displayJSONTable(filteredData, { showAll: true });
+        applyFilters(); // ✅ ensure full filtered table re-renders
       };
     }
+
+    // 🔹 DEFAULT (numeric / text)
     else {
-      // Default numeric/text (with actions)
       valueInput.style.display = "inline-block";
       textInput.style.display = "none";
       actionSelect.style.display = "inline-block";
       valueSelect.style.display = "none";
 
-      applyBtn.onclick = () => {
+      applyBtn.onclick = async () => {
         applyBulkAction(col, valueInput.value, actionSelect.value);
+        await new Promise((r) => setTimeout(r, 100));
+        applyFilters(); // ✅ full table refresh after numeric/text bulk edit
       };
     }
   });
 
-  // Initialize default
+  // init default column
   columnSelect.dispatchEvent(new Event("change"));
 }
 
