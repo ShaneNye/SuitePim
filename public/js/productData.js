@@ -609,7 +609,7 @@ function renderBulkActionPanel(columns, parent) {
           filteredData[rowIndex][col] = isChecked;
         });
 
-        displayJSONTable(filteredData).then(() => {
+        displayJSONTable(filteredData, { showAll: true }).then(() => {
           const newRows = document.querySelectorAll("table.csv-table tr");
           newRows.forEach((row, index) => {
             if (index === 0) return;
@@ -650,7 +650,8 @@ function renderBulkActionPanel(columns, parent) {
           filteredData[rowIndex][col] = newText;
         });
 
-        displayJSONTable(filteredData).then(() => {
+        // ✅ Updated here — showAll: true
+        displayJSONTable(filteredData, { showAll: true }).then(() => {
           const newRows = document.querySelectorAll("table.csv-table tr");
           newRows.forEach((row, index) => {
             if (index === 0) return;
@@ -681,7 +682,6 @@ function renderBulkActionPanel(columns, parent) {
   // Initialize default
   columnSelect.dispatchEvent(new Event("change"));
 }
-
 
 
 
