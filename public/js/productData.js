@@ -783,8 +783,8 @@ function applyBulkAction(column, value, action) {
     if (Array.isArray(baselineData)) baselineData[rowIndex] = { ...rowData };
   });
 
-  // Re-render and restore checks/highlights
-  displayJSONTable(filteredData).then(() => {
+  // ✅ Force all filtered rows to render after bulk change
+  displayJSONTable(filteredData, { showAll: true }).then(() => {
     const newRows = document.querySelectorAll("table.csv-table tr");
     newRows.forEach((row, index) => {
       if (index === 0) return;
@@ -800,6 +800,7 @@ function applyBulkAction(column, value, action) {
     if (selectAll && allChecked) selectAll.checked = true;
   });
 }
+
 
 
 
