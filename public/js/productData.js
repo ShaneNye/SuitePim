@@ -1308,7 +1308,13 @@ function applyUpdates() {
 
 
 
-const API_BASE = "https://suitepim.onrender.com"; // ✅ backend server
+// ✅ Automatically switch API base between local and Render
+const API_BASE =
+  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:3000"
+    : "https://suitepim.onrender.com";
+
+
 
 async function pushUpdates() {
   const table = document.querySelector("table.csv-table");

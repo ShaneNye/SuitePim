@@ -1,0 +1,264 @@
+/* =====================================================
+   WooCommerce Connector (Refined & Scoped)
+   For SuitePim dashboard consistency
+===================================================== */
+
+:root {
+  --brand: #0081ab;
+  --brand-dark: #026aa7;
+  --brand-darker: #005f86;
+  --ink: #222;
+  --ink-soft: #555;
+  --bg-page: #f4f6f9;
+  --bg-panel: #ffffff;
+  --line: #e0e4e8;
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --radius: 0.6rem;
+  --radius-sm: 0.4rem;
+  --focus: 0 0 0 3px rgba(0, 129, 171, 0.25);
+  --row-select: #ebf9fb;
+}
+
+/* ===============================
+   Layout Wrapper
+================================ */
+#woocommerce-connector {
+  font-family: "Proxima Nova", "Segoe UI", Arial, sans-serif;
+  background: var(--bg-page);
+  color: var(--ink);
+  padding: 1.5rem 2rem;
+  min-height: 80vh;
+  box-sizing: border-box;
+}
+
+/* ===============================
+   Filter Panel (clean card look)
+================================ */
+#woocommerce-connector .filter-panel-container {
+  background: var(--bg-panel);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 1.75rem;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+#woocommerce-connector .filter-panel-header {
+  background: linear-gradient(90deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: #fff;
+  padding: 0.9rem 1.25rem;
+  font-weight: 600;
+  font-size: 1.05rem;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  letter-spacing: 0.2px;
+  transition: background 0.25s ease;
+}
+
+#woocommerce-connector .filter-panel-header:hover {
+  background: linear-gradient(90deg, var(--brand-dark) 0%, var(--brand-darker) 100%);
+}
+
+#woocommerce-connector .filter-panel {
+  background: var(--bg-panel);
+  padding: 1.25rem 1.5rem;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+#woocommerce-connector .filter-panel.collapsed {
+  max-height: 0;
+  padding: 0 1.5rem;
+  overflow: hidden;
+}
+
+#woocommerce-connector #filter-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+
+#woocommerce-connector #filter-table th {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 500;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border: none;
+  font-size: 0.9rem;
+}
+
+#woocommerce-connector #filter-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.5rem 0.75rem;
+  vertical-align: middle;
+}
+
+/* Buttons */
+#woocommerce-connector .add-filter-btn,
+#woocommerce-connector .apply-filter-btn {
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 1.1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-right: 0.5rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+#woocommerce-connector .add-filter-btn:hover,
+#woocommerce-connector .apply-filter-btn:hover {
+  background: var(--brand-dark);
+  transform: translateY(-1px);
+}
+
+#woocommerce-connector .remove-filter-btn {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.6rem;
+  transition: background 0.2s ease;
+}
+#woocommerce-connector .remove-filter-btn:hover {
+  background: #c0392b;
+}
+
+/* ===============================
+   Table Styles (refined)
+================================ */
+#woocommerce-connector #table-data {
+  overflow-x: auto;
+}
+
+#woocommerce-connector .csv-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-panel);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+  font-size: 0.9rem;
+}
+
+#woocommerce-connector .csv-table th,
+#woocommerce-connector .csv-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+#woocommerce-connector .csv-table th {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-size: 0.92rem;
+}
+
+#woocommerce-connector .csv-table tr:hover td {
+  background: #f2fbff;
+  transition: background 0.15s ease;
+}
+
+#woocommerce-connector .csv-table td input[type="checkbox"] {
+  transform: scale(1.15);
+  cursor: pointer;
+}
+
+/* Alternate rows */
+#woocommerce-connector .csv-table tr:nth-child(even) td {
+  background: #fafafa;
+}
+
+/* Parent rows */
+#woocommerce-connector .parent-row {
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+#woocommerce-connector .parent-row.expanded td {
+  background: #e9f7f8 !important;
+}
+
+/* Child table */
+#woocommerce-connector .child-row {
+  background: #f9f9f9;
+}
+
+#woocommerce-connector .child-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+#woocommerce-connector .child-table th {
+  background: var(--brand-dark);
+  color: #fff;
+  font-weight: 500;
+  padding: 0.55rem 0.75rem;
+}
+
+#woocommerce-connector .child-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Has Value icons */
+#woocommerce-connector .has-value {
+  text-align: center;
+  font-weight: bold;
+  font-size: 1rem;
+  color: var(--ink-soft);
+}
+
+#woocommerce-connector .has-value[data-status="ok"] {
+  color: #00a65a;
+}
+#woocommerce-connector .has-value[data-status="missing"] {
+  color: #e74c3c;
+}
+
+/* ===============================
+   Loading Overlay / Spinner
+================================ */
+#woocommerce-connector .loading-container {
+  padding: 3rem 0;
+}
+#woocommerce-connector .loading-container p {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ===============================
+   Responsive
+================================ */
+@media (max-width: 900px) {
+  #woocommerce-connector {
+    padding: 1rem;
+  }
+
+  #woocommerce-connector .csv-table th,
+  #woocommerce-connector .csv-table td {
+    padding: 0.6rem;
+  }
+
+  #woocommerce-connector .filter-panel {
+    padding: 1rem;
+  }
+}

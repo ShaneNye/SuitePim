@@ -859,6 +859,11 @@ app.get("/fieldmap", authMiddleware, (req, res) => {
   res.json(fieldMap);
 });
 
+app.get("/WoocommerceConnector.html", authMiddleware, (req, res) => {
+  res.sendFile(join(__dirname, "public", "WoocommerceConnector.html"));
+});
+
+
 
 
 
