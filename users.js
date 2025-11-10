@@ -65,5 +65,14 @@ export const users = [
         sandbox_tokenSecret:"294a819a3d170a9edd0b75ceb2e95066e673ae43c2aa2c31d15f66b57ccd2ebb",
         prod_tokenId: "709e7ff5f87b3df8568ff06991168d4ed0d69fedd8b53945ae0c2273d21853eb",
         prod_tokenSecret: "4a3ef1673f989cec2265eec38c32f324b4d7175341a1d01dda8b47307255ded9"
-    }
+    },
+    {
+        username: "Victoria Cole",
+        password: "marketing",
+        sandbox_tokenId: "ef4c5e540fed2c96f13103a289c90398fa9255389939eb353a35b59d919954a5",
+        sandbox_tokenSecret:"294a819a3d170a9edd0b75ceb2e95066e673ae43c2aa2c31d15f66b57ccd2ebb",
+        prod_tokenId: "cec7f5003725ca6a65ffd060a07e56dbb85e46544966fc5cab452bc44f77ff99",
+        prod_tokenSecret: "79d14c24d8f7f54094bdd819dfb57fc33d3a09e38195db7429da94a54fbabf86"
+    },
+
 ];
