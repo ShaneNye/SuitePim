@@ -10,6 +10,8 @@ import { fileURLToPath } from "url";
 import dotenv from "dotenv";
 import WooCommerceRestApiPkg from "@woocommerce/woocommerce-rest-api";
 import fs from "fs";
+import WooConnectorRoutes from "./routes/WooConnector.js";
+
 
 // ✅ WooCommerce API import
 const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPkg;
@@ -103,6 +105,7 @@ const staticBase =
 const publicPath = path.join(staticBase, "public");
 app.use("/public", express.static(publicPath));
 console.log("📂 Serving static from:", publicPath);
+
 
 
 /* -----------------------------
@@ -230,6 +233,10 @@ function authMiddleware(req, res, next) {
 } 
 
 */
+
+app.use("/api/woo", authMiddleware, WooConnectorRoutes);
+
+
 
 /* -----------------------------
    Auth

@@ -33,8 +33,99 @@ window.addEventListener("DOMContentLoaded", async () => {
     filteredData = fullData.filter((r) => r["Is Parent"]);
     container.innerHTML = "";
 
+    // --- Render Filter Panel ---
     renderFilterPanel(container);
-    buildTable(filteredData, container);
+
+    // --- Push Button (below filter, above table) ---
+    const actionContainer = document.createElement("div");
+    actionContainer.className = "woo-action-container";
+
+    const pushBtn = document.createElement("button");
+    pushBtn.textContent = "Push";
+    pushBtn.className = "woo-push-btn";
+    actionContainer.appendChild(pushBtn);
+    container.appendChild(actionContainer);
+
+    // ✅ now safely add the click logic *after* pushBtn exists
+    pushBtn.addEventListener("click", async () => {
+      const checkedRows = document.querySelectorAll(".row-select:checked");
+      if (checkedRows.length === 0) {
+        alert("Please select at least one item to push.");
+        return;
+      }
+
+      // Collect data from selected parent + child rows
+      const rowsToPush = [];
+
+      checkedRows.forEach((cb) => {
+        const row = cb.closest("tr");
+        if (!row) return;
+
+        // find nearest table header row
+        const table = row.closest("table");
+        const headers = [...table.querySelectorAll("th")].map((th) =>
+          th.textContent.trim()
+        );
+
+        const cells = [...row.querySelectorAll("td")];
+        const rowData = {};
+
+        // Map header -> cell text
+        headers.forEach((header, i) => {
+          const cell = cells[i];
+          if (!cell) return;
+          const val = cell.textContent.trim();
+          if (header) rowData[header] = val;
+        });
+
+        // parent/child detection
+        const parentId = row.dataset.parentId;
+        if (parentId) rowData["parent internal  id"] = parentId;
+
+        rowsToPush.push(rowData);
+      });
+
+      if (rowsToPush.length === 0) {
+        alert("No valid rows found.");
+        return;
+      }
+
+      console.log("🟢 Pushing rows:", rowsToPush);
+
+      // Show temporary loader
+      pushBtn.disabled = true;
+      pushBtn.textContent = "Pushing...";
+
+      try {
+        const res = await fetch("/api/woo/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rows: rowsToPush,
+            environment: "Sandbox", // change to Production as needed
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          alert(`❌ Push failed: ${data.error || data.message}`);
+        } else {
+          console.log("✅ WooCommerce Push Results:", data);
+          alert(`✅ Push completed (${data.results.length} items processed)`);
+        }
+      } catch (err) {
+        console.error("❌ Push error:", err);
+        alert("An error occurred while pushing products.");
+      } finally {
+        pushBtn.disabled = false;
+        pushBtn.textContent = "Push";
+      }
+    });
+
+    // --- Limit to 25 rows on initial load ---
+    const initialSubset = filteredData.slice(0, 25);
+    buildTable(initialSubset, container);
   } catch (err) {
     container.innerHTML = `<p style="color:red;">❌ Failed to load: ${err.message}</p>`;
   }
@@ -115,7 +206,8 @@ function addFilterRow() {
   const select = document.createElement("select");
   select.className = "filter-field theme-select";
   const fields = ["Name", "Display Name", "Preferred Supplier", "Class", "Category", "Colour Filter"];
-  select.innerHTML = `<option value="">-- choose field --</option>` +
+  select.innerHTML =
+    `<option value="">-- choose field --</option>` +
     fields.map((f) => `<option value="${f}">${f}</option>`).join("");
   fieldTd.appendChild(select);
 
@@ -154,11 +246,15 @@ function buildTable(parents, container) {
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
+
+  // --- Loop through each parent row ---
   parents.forEach((parent) => {
     const tr = document.createElement("tr");
     tr.className = "parent-row";
+    tr.dataset.parentId = parent["Internal ID"];
+
     tr.innerHTML = `
-      <td><input type="checkbox" class="row-select"></td>
+      <td><input type="checkbox" class="row-select parent-checkbox"></td>
       <td>${parent["Internal ID"]}</td>
       <td>${parent["Name"] || ""}</td>
       <td>${parent["Display Name"] || ""}</td>
@@ -170,6 +266,7 @@ function buildTable(parents, container) {
     const children = fullData.filter(
       (c) => c["parent internal  id"] === parent["Internal ID"]
     );
+
     if (children.length > 0) {
       const childRow = document.createElement("tr");
       childRow.className = "child-row";
@@ -179,6 +276,22 @@ function buildTable(parents, container) {
       const childTable = document.createElement("table");
       childTable.className = "child-table";
 
+      // --- Collect matrix fields dynamically (only those with values) ---
+      const matrixFields = new Set();
+      children.forEach((c) => {
+        Object.keys(c).forEach((key) => {
+          if (
+            key.startsWith("Matrix :") &&
+            c[key] &&
+            String(c[key]).trim() !== ""
+          ) {
+            matrixFields.add(key);
+          }
+        });
+      });
+      const matrixColumns = Array.from(matrixFields);
+
+      // --- Build child header dynamically ---
       const head = document.createElement("tr");
       head.innerHTML = `
         <th><input type="checkbox" class="select-all-child"></th>
@@ -186,18 +299,30 @@ function buildTable(parents, container) {
         <th>Name</th>
         <th>Enabled for WooCommerce</th>
         <th>Connector ID</th>
+        ${matrixColumns
+          .map((col) => `<th>${col.replace("Matrix :", "").trim()}</th>`)
+          .join("")}
         <th>Has Values</th>
       `;
       childTable.appendChild(head);
 
+      // --- Build child rows ---
       children.forEach((c) => {
         const cr = document.createElement("tr");
+        cr.classList.add("child-item");
+        cr.dataset.parentId = parent["Internal ID"];
+
+        let matrixCells = matrixColumns
+          .map((col) => `<td>${c[col] || ""}</td>`)
+          .join("");
+
         cr.innerHTML = `
-          <td><input type="checkbox" class="row-select"></td>
+          <td><input type="checkbox" class="row-select child-checkbox"></td>
           <td>${c["Internal ID"]}</td>
           <td>${c["Name"] || ""}</td>
           <td>${c["Enabled for WooCommerce"] || ""}</td>
           <td>${c["Connector ID"] || ""}</td>
+          ${matrixCells}
           <td class="has-value">${hasMissingFields(c) ? "❌" : "✔️"}</td>
         `;
         childTable.appendChild(cr);
@@ -208,6 +333,7 @@ function buildTable(parents, container) {
       childRow.style.display = "none";
       tbody.append(tr, childRow);
 
+      // --- Toggle expand/collapse ---
       tr.addEventListener("click", (e) => {
         if (e.target.type === "checkbox") return;
         const open = childRow.style.display === "table-row";
@@ -221,4 +347,39 @@ function buildTable(parents, container) {
 
   table.appendChild(tbody);
   container.appendChild(table);
+
+  // =====================================================
+  // 🧩 Checkbox hierarchy logic
+  // =====================================================
+
+  const masterCheckbox = table.querySelector(".select-all");
+
+  // --- Master checkbox toggles all ---
+  masterCheckbox.addEventListener("change", (e) => {
+    const checked = e.target.checked;
+    table.querySelectorAll(".row-select").forEach((cb) => {
+      cb.checked = checked;
+    });
+  });
+
+  // --- Parent checkbox toggles all its children ---
+  table.querySelectorAll(".parent-checkbox").forEach((parentCb) => {
+    parentCb.addEventListener("change", (e) => {
+      const parentId = e.target.closest("tr").dataset.parentId;
+      const checked = e.target.checked;
+
+      const childCheckboxes = table.querySelectorAll(
+        `.child-checkbox[data-parent-id="${parentId}"]`
+      );
+      childCheckboxes.forEach((cb) => (cb.checked = checked));
+    });
+  });
+
+  // --- Assign parentId to each child checkbox for lookup ---
+  table.querySelectorAll(".child-checkbox").forEach((cb) => {
+    const row = cb.closest("tr");
+    if (row && row.dataset.parentId) {
+      cb.dataset.parentId = row.dataset.parentId;
+    }
+  });
 }
