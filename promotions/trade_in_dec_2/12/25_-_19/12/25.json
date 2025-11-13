@@ -70,7 +70,52 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Gemstone Mattreses",
+      "color": "rgba(232, 150, 202, 0.2)",
+      "rows": [
+        {
+          "label": "Emerald Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "emerald mattress"
+            }
+          ]
+        },
+        {
+          "label": "Rosaline Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Rosaline Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Morion Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Morion Mattress"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T13:07:30.881Z"
+  "savedAt": "2025-11-13T13:26:03.851Z"
 }
