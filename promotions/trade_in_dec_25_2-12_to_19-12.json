@@ -1,0 +1,81 @@
+{
+  "title": "Trade in Dec 25 2-12 to 19-12",
+  "sections": [
+    {
+      "label": "Bed Frames ",
+      "color": "rgba(225, 152, 152, 0.2)",
+      "rows": [
+        {
+          "label": "A Group Bed Frames ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "32"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "B Group Bed Frames ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "33"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "C Group Bed Frames ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "34"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "D Group Bed Frames ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "35"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "",
+      "color": "",
+      "rows": []
+    }
+  ],
+  "savedAt": "2025-11-13T13:45:40.952Z"
+}
