@@ -399,7 +399,64 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Bamboo Mattresses",
+      "color": "rgba(198, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Nurture 4000 Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Nurture"
+            }
+          ]
+        },
+        {
+          "label": "Relaxation 6000 Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "relaxation 6000"
+            }
+          ]
+        },
+        {
+          "label": "Tranquility 8000 Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "tranquility 8000"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T14:14:24.321Z"
+  "savedAt": "2025-11-13T14:17:54.807Z"
 }
