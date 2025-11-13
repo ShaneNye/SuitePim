@@ -695,7 +695,191 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Sterling Mattresses",
+      "color": "rgba(234, 237, 233, 0.2)",
+      "rows": [
+        {
+          "label": "Cosy Siesta Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy siesta"
+            }
+          ]
+        },
+        {
+          "label": "Cosy Nap Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy nap"
+            }
+          ]
+        },
+        {
+          "label": "Cosy Slumber Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy slumber"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Easy Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze easy"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Rest Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze rest"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Calm Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze calm "
+            }
+          ]
+        },
+        {
+          "label": "Duke Comfort Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Duke comfort "
+            }
+          ]
+        },
+        {
+          "label": "Duke Ortho Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "duke ortho"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Classic Mattresses",
+      "color": "rgba(195, 160, 207, 0.2)",
+      "rows": [
+        {
+          "label": "Classic Cashmere Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "Classic cashmere"
+            }
+          ]
+        },
+        {
+          "label": "Classic Cool Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "Classic cool"
+            }
+          ]
+        },
+        {
+          "label": "Classic Pocket Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "classic pocket"
+            }
+          ]
+        },
+        {
+          "label": "Classic Essential Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "classic essential"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T14:37:46.913Z"
+  "savedAt": "2025-11-13T14:51:51.284Z"
 }
