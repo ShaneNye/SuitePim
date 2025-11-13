@@ -72,12 +72,12 @@
       ]
     },
     {
-      "label": "",
-      "color": "",
+      "label": "Harrington & Abbott ",
+      "color": "rgba(233, 175, 214, 0.2)",
       "rows": [
         {
-          "label": "kelmscot",
-          "discount": "30",
+          "label": "Kelmscott Mattress",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -93,8 +93,216 @@
           ]
         },
         {
-          "label": "true edge bases",
-          "discount": "15",
+          "label": "Wightwick Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "wightwick"
+            }
+          ]
+        },
+        {
+          "label": "Avebury Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Avebury"
+            }
+          ]
+        },
+        {
+          "label": "Rufford Ortho Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Rufford Ortho"
+            }
+          ]
+        },
+        {
+          "label": "Howfield Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Howfield"
+            }
+          ]
+        },
+        {
+          "label": "Kentwell Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Kentwell"
+            }
+          ]
+        },
+        {
+          "label": "Sheldon Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "sheldon"
+            }
+          ]
+        },
+        {
+          "label": "Carborne Ortho Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "carborne"
+            }
+          ]
+        },
+        {
+          "label": "Gosfield Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Harlington Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Blenhiem Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Blenhiem Mattress Enhancer ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Asteria Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Harmonia Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Neveah Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Luna Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Aurora Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Harrington & Abbott Headboards ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Class",
+              "value": "10"
+            }
+          ]
+        },
+        {
+          "label": "Harrington & Abbott Bases",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -112,5 +320,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-13T13:52:50.435Z"
+  "savedAt": "2025-11-13T14:08:55.870Z"
 }
