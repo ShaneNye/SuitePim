@@ -1361,7 +1361,47 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Black Mattresses",
+      "color": "rgba(44, 44, 42, 0.2)",
+      "rows": [
+        {
+          "label": "Jet Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "jet"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            }
+          ]
+        },
+        {
+          "label": "Ebony Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "ebony"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T15:33:07.294Z"
+  "savedAt": "2025-11-13T15:53:08.732Z"
 }
