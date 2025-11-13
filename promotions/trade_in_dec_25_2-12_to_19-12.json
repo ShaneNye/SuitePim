@@ -879,7 +879,81 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Aura Mattresses",
+      "color": "rgba(98, 139, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Aura Support Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Support "
+            }
+          ]
+        },
+        {
+          "label": "Aura Ortho Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Ortho"
+            }
+          ]
+        },
+        {
+          "label": "Aura Cloud Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Cloud"
+            }
+          ]
+        },
+        {
+          "label": "Aura Essence Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Essence"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T14:51:51.284Z"
+  "savedAt": "2025-11-13T14:58:44.436Z"
 }
