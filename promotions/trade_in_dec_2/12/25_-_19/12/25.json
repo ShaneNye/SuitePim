@@ -77,7 +77,7 @@
       "rows": [
         {
           "label": "Emerald Mattress ",
-          "discount": "",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -90,7 +90,7 @@
         },
         {
           "label": "Rosaline Mattress ",
-          "discount": "",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -103,7 +103,7 @@
         },
         {
           "label": "Morion Mattress",
-          "discount": "",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -113,9 +113,126 @@
               "value": "Morion Mattress"
             }
           ]
+        },
+        {
+          "label": "Zircon Mattress",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Zircon Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Ruby Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Ruby Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Amatrix Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Amatrix mattress"
+            }
+          ]
+        },
+        {
+          "label": "Citrine Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Citrine Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Ironstone Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Ironstone Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Amethyst Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Amethyst Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Amber Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Amber Mattress"
+            }
+          ]
+        },
+        {
+          "label": "Garnet Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Garnet Mattress "
+            }
+          ]
+        },
+        {
+          "label": "Lolite Mattress. ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Lolite Mattress"
+            }
+          ]
         }
       ]
     }
   ],
-  "savedAt": "2025-11-13T13:26:03.851Z"
+  "savedAt": "2025-11-13T13:33:57.862Z"
 }
