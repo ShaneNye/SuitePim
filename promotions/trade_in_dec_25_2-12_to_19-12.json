@@ -1034,7 +1034,7 @@
       "rows": [
         {
           "label": "Burley Mattress ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1051,7 +1051,7 @@
         },
         {
           "label": "Melbury Mattress ",
-          "discount": "",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1068,7 +1068,7 @@
         },
         {
           "label": "Hinton Mattress ",
-          "discount": "",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1085,7 +1085,7 @@
         },
         {
           "label": "Rockford Mattress ",
-          "discount": "",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1108,7 +1108,7 @@
       "rows": [
         {
           "label": "Deluxe Ortho ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1125,7 +1125,7 @@
         },
         {
           "label": "Deluxe Natural ",
-          "discount": "",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1142,7 +1142,7 @@
         },
         {
           "label": "Deluxe Gel ",
-          "discount": "",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1159,7 +1159,7 @@
         },
         {
           "label": "Deluxe Comfort ",
-          "discount": "",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1177,5 +1177,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-13T15:13:05.860Z"
+  "savedAt": "2025-11-13T15:23:46.791Z"
 }
