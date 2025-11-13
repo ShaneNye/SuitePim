@@ -74,8 +74,43 @@
     {
       "label": "",
       "color": "",
-      "rows": []
+      "rows": [
+        {
+          "label": "kelmscot",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "kelmscott"
+            }
+          ]
+        },
+        {
+          "label": "true edge bases",
+          "discount": "15",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T13:45:40.952Z"
+  "savedAt": "2025-11-13T13:52:50.435Z"
 }
