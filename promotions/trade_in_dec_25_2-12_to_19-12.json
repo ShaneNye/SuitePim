@@ -1175,7 +1175,193 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Gemstone Mattresses",
+      "color": "rgba(218, 234, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Emerald Mattress",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "emerald"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Rosaline Mattress",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "rosaline"
+            }
+          ]
+        },
+        {
+          "label": "Morion Mattress",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "morion"
+            }
+          ]
+        },
+        {
+          "label": "Zircon Mattress",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "zircon"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Ruby Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ruby"
+            }
+          ]
+        },
+        {
+          "label": "Amatrix Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "amatrix"
+            }
+          ]
+        },
+        {
+          "label": "Citrine Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "citrine"
+            }
+          ]
+        },
+        {
+          "label": "Ironstone Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ironstone"
+            }
+          ]
+        },
+        {
+          "label": "Amethyst Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "amethyst"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Garnet Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "garnet"
+            }
+          ]
+        },
+        {
+          "label": "Amber Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "amber"
+            }
+          ]
+        },
+        {
+          "label": "Lolite Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "lolite"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T15:23:46.791Z"
+  "savedAt": "2025-11-13T15:31:13.256Z"
 }
