@@ -456,7 +456,246 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Pure Mattresses",
+      "color": "rgba(233, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Pure Serene Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "pure serene"
+            }
+          ]
+        },
+        {
+          "label": "Pure Soothe Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "Pure soothe"
+            }
+          ]
+        },
+        {
+          "label": "Pure Support Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "pure support"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Gel Mattresses",
+      "color": "rgba(179, 233, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Gel Essence Comfort Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel essence comfort"
+            }
+          ]
+        },
+        {
+          "label": "Gel Essence Ortho Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel essence ortho"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Comfort Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel plush comfort "
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Ortho Mattress ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel plush ortho "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Vio Sleep Mattresses",
+      "color": "rgba(201, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Earth Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "earth care"
+            }
+          ]
+        },
+        {
+          "label": "Flora Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "flora care"
+            }
+          ]
+        },
+        {
+          "label": "Ocean Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "ocean care"
+            }
+          ]
+        },
+        {
+          "label": "Forest Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "forest care"
+            }
+          ]
+        },
+        {
+          "label": "Meadow Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "meadow "
+            }
+          ]
+        },
+        {
+          "label": "Haven Care Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "haven"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T14:17:54.807Z"
+  "savedAt": "2025-11-13T14:37:46.913Z"
 }
