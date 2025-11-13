@@ -953,7 +953,81 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Nova Mattress ",
+      "color": "rgba(234, 191, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Nova Balance Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova balance "
+            }
+          ]
+        },
+        {
+          "label": "Nova Comfort Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova comfort "
+            }
+          ]
+        },
+        {
+          "label": "Nova Ortho Mattress",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova ortho "
+            }
+          ]
+        },
+        {
+          "label": "Nova Soothe Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova soothe "
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T14:58:44.436Z"
+  "savedAt": "2025-11-13T15:02:07.876Z"
 }
