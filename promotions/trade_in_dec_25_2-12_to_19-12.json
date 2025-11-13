@@ -1027,7 +1027,83 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Heritage Mattresses ",
+      "color": "rgba(234, 107, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Burley Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Melburry Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Hinton Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Rockford Mattress ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        }
+      ]
+    },
+    {
+      "label": "Heritage Deluxe Mattresses ",
+      "color": "rgba(231, 98, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Deluxe Ortho ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Deluxe Natural ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Deluxe Gel ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Deluxe Comfort ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T15:02:07.876Z"
+  "savedAt": "2025-11-13T15:08:33.841Z"
 }
