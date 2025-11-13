@@ -217,7 +217,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "gosfield"
+            }
+          ]
         },
         {
           "label": "Harlington Mattress ",
@@ -225,7 +234,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "harlington "
+            }
+          ]
         },
         {
           "label": "Blenhiem Mattress ",
@@ -233,7 +251,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "blenheim mattress"
+            }
+          ]
         },
         {
           "label": "Blenhiem Mattress Enhancer ",
@@ -241,7 +268,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Blenheim Enhancer"
+            }
+          ]
         },
         {
           "label": "Asteria Mattress ",
@@ -249,7 +285,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "asteria"
+            }
+          ]
         },
         {
           "label": "Harmonia Mattress",
@@ -257,7 +302,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "harmonia"
+            }
+          ]
         },
         {
           "label": "Neveah Mattress ",
@@ -265,7 +319,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "neveah"
+            }
+          ]
         },
         {
           "label": "Luna Mattress",
@@ -273,7 +336,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "luna"
+            }
+          ]
         },
         {
           "label": "Aurora Mattress",
@@ -281,7 +353,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "aurora"
+            }
+          ]
         },
         {
           "label": "Harrington & Abbott Headboards ",
@@ -320,5 +401,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-13T14:08:55.870Z"
+  "savedAt": "2025-11-13T14:14:24.321Z"
 }
