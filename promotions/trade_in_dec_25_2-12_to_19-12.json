@@ -1038,15 +1038,33 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "burley "
+            }
+          ]
         },
         {
-          "label": "Melburry Mattress ",
+          "label": "Melbury Mattress ",
           "discount": "",
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "melbury"
+            }
+          ]
         },
         {
           "label": "Hinton Mattress ",
@@ -1054,7 +1072,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "hinton"
+            }
+          ]
         },
         {
           "label": "Rockford Mattress ",
@@ -1062,7 +1089,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "rockford"
+            }
+          ]
         }
       ]
     },
@@ -1076,7 +1112,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe ortho"
+            }
+          ]
         },
         {
           "label": "Deluxe Natural ",
@@ -1084,7 +1129,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe natural"
+            }
+          ]
         },
         {
           "label": "Deluxe Gel ",
@@ -1092,7 +1146,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe gel "
+            }
+          ]
         },
         {
           "label": "Deluxe Comfort ",
@@ -1100,10 +1163,19 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe comfort "
+            }
+          ]
         }
       ]
     }
   ],
-  "savedAt": "2025-11-13T15:08:33.841Z"
+  "savedAt": "2025-11-13T15:13:05.860Z"
 }
