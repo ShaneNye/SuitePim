@@ -1616,7 +1616,7 @@
       "rows": [
         {
           "label": "Guest beds ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1635,7 +1635,7 @@
       "rows": [
         {
           "label": "Bedroom Furniture",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1649,5 +1649,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-14T15:01:24.504Z"
+  "savedAt": "2025-11-14T15:15:42.244Z"
 }
