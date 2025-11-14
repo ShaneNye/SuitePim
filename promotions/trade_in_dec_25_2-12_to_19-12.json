@@ -1496,7 +1496,16 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
         },
         {
           "label": "Classic Bases",
@@ -1504,10 +1513,23 @@
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "classic"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
         }
       ]
     }
   ],
-  "savedAt": "2025-11-14T14:10:34.383Z"
+  "savedAt": "2025-11-14T14:16:48.893Z"
 }
