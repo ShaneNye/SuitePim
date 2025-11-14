@@ -1450,19 +1450,45 @@
         },
         {
           "label": "Aura Solid Base",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Aura solid"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            }
+          ]
         },
         {
           "label": "Aura Standard Base ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "Aura standard"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
         },
         {
           "label": "Quantum & Nature Bases ",
@@ -1483,5 +1509,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-14T14:04:21.399Z"
+  "savedAt": "2025-11-14T14:10:34.383Z"
 }
