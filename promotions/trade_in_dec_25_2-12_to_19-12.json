@@ -1529,7 +1529,46 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Headboards only ",
+      "color": "rgba(255, 248, 56, 0.2)",
+      "rows": [
+        {
+          "label": "Nova & Aura Headboards",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Class",
+              "value": "10"
+            }
+          ]
+        },
+        {
+          "label": "Quantum & Nature Headboards",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Classic Headboards ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-14T14:16:48.893Z"
+  "savedAt": "2025-11-14T14:52:50.385Z"
 }
