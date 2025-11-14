@@ -1408,19 +1408,45 @@
       "rows": [
         {
           "label": "Nova Standard Base ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova standard"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
         },
         {
           "label": "Nova Solid Base ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
-          "filters": []
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nova solid"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
         },
         {
           "label": "Aura Solid Base",
@@ -1457,5 +1483,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-14T14:02:13.273Z"
+  "savedAt": "2025-11-14T14:04:21.399Z"
 }
