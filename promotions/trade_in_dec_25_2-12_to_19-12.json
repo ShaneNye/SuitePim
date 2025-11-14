@@ -1590,7 +1590,64 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Childrens beds ",
+      "color": "rgba(31, 38, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Childrens beds ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "4"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Guest Beds ",
+      "color": "rgba(234, 122, 31, 0.2)",
+      "rows": [
+        {
+          "label": "Guest beds ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "9"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Bedroom Furniture",
+      "color": "rgba(13, 186, 42, 0.2)",
+      "rows": [
+        {
+          "label": "Bedroom Furniture",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "3"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-14T14:56:52.588Z"
+  "savedAt": "2025-11-14T15:01:24.504Z"
 }
