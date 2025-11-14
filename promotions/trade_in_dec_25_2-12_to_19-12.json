@@ -1401,7 +1401,61 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Bases Only ",
+      "color": "rgba(156, 88, 187, 0.2)",
+      "rows": [
+        {
+          "label": "Nova Standard Base ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Nova Solid Base ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Aura Solid Base",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Aura Standard Base ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Quantum & Nature Bases ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        },
+        {
+          "label": "Classic Bases",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T15:53:08.732Z"
+  "savedAt": "2025-11-14T14:02:13.273Z"
 }
