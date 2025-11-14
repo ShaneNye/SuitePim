@@ -1492,7 +1492,7 @@
         },
         {
           "label": "Quantum & Nature Bases ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1509,7 +1509,7 @@
         },
         {
           "label": "Classic Bases",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1536,7 +1536,7 @@
       "rows": [
         {
           "label": "Nova & Aura Headboards",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1553,7 +1553,7 @@
         },
         {
           "label": "Quantum & Nature Headboards",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1570,7 +1570,7 @@
         },
         {
           "label": "Classic Headboards ",
-          "discount": "",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1592,5 +1592,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-14T14:55:27.743Z"
+  "savedAt": "2025-11-14T14:56:52.588Z"
 }
