@@ -1,0 +1,87 @@
+{
+  "title": "Mid Black Friday Changes",
+  "sections": [
+    {
+      "label": "Bed Frames",
+      "color": "",
+      "rows": [
+        {
+          "label": "Bed Frames",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "32",
+                "33",
+                "34",
+                "35"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Adjustables",
+      "color": "",
+      "rows": [
+        {
+          "label": "",
+          "discount": "35",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "220",
+                "292",
+                "345"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Buttermer/Seacale",
+      "color": "",
+      "rows": [
+        {
+          "label": "Buttermere",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "buttermere"
+            }
+          ]
+        },
+        {
+          "label": "Seacale",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "seacale"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-11-18T09:26:55.412Z"
+}
