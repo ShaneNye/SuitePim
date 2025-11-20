@@ -1,0 +1,25 @@
+{
+  "title": "Midnight Mattress",
+  "sections": [
+    {
+      "label": "midnight mattress",
+      "color": "",
+      "rows": [
+        {
+          "label": "midnight",
+          "discount": "70",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Midnight Mattress :"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-11-20T13:04:37.240Z"
+}
