@@ -22,8 +22,8 @@ export const users = [
         password: "muffin123",
         sandbox_tokenId: "7905f8c6b25c020a144c1d46a6947a4f4b6469407d3c1089495b1ed7264f41ca",
         sandbox_tokenSecret:"f8b4a5cc432ff57136724f4c0d71cf71cd2f6172dc5cb8cd1534d42ae86fd488",
-        prod_tokenId: "d6d27fceed5fadd2f8abfcb6e1929b0a735d86b3ccd66626b03341e5b040b0ec",
-        prod_tokenSecret: "e8730284b4a8433bd5e44cde6832d06835f38a21b6ee664b13b03b6e797bffcb"
+        prod_tokenId: "65efda870da4242d193473fe7e73e94452a937b9d1e5b9f4cf1d4324184f78ba",
+        prod_tokenSecret: "c3c09f5dc586d2a5645b89f0f73d945d0fb39f774accd736f7680d46c80ca15c"
     },
         {
         username: "Suzanne Skinner",
