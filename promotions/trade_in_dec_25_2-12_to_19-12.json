@@ -1368,7 +1368,7 @@
       "rows": [
         {
           "label": "Jet Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1385,7 +1385,7 @@
         },
         {
           "label": "Ebony Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1649,5 +1649,5 @@
       ]
     }
   ],
-  "savedAt": "2025-11-14T15:25:17.299Z"
+  "savedAt": "2025-12-01T16:22:52.735Z"
 }
