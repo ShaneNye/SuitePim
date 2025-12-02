@@ -6,6 +6,7 @@ yarn-error.log*
 # Environment
 .env
 *.local
+promotions/*
 
 # Electron build outputs
 /dist
