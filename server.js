@@ -205,9 +205,10 @@ app.use(
     secret: "your-secret-key",
     resave: false,
     saveUninitialized: true,
-    cookie: { maxAge: 30 * 60 * 1000 },
+    cookie: { maxAge: 48 * 60 * 60 * 1000 }, // 48 hours
   })
 );
+
 
 
 function authMiddleware(req, res, next) {

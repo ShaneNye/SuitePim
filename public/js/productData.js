@@ -45,6 +45,114 @@ async function getListOptions(field) {
   }
 }
 
+function renderSortBar(columns, parentContainer) {
+  const sortContainer = document.createElement("div");
+  sortContainer.id = "sort-bar";
+  sortContainer.style.display = "none"; // hidden until filters applied
+  sortContainer.style.alignItems = "center";
+  sortContainer.style.gap = "0.5rem";
+  sortContainer.style.margin = "1rem 0";
+  sortContainer.style.padding = "0.5rem";
+  sortContainer.style.background = "#f7f7f7";
+  sortContainer.style.border = "1px solid #ddd";
+  sortContainer.style.borderRadius = "6px";
+
+  // Label
+  const label = document.createElement("strong");
+  label.textContent = "Sort By:";
+  sortContainer.appendChild(label);
+
+  // Field selector
+  const fieldSelect = document.createElement("select");
+  fieldSelect.id = "sort-field-select";
+  fieldSelect.classList.add("theme-select");
+
+  const empty = document.createElement("option");
+  empty.value = "";
+  empty.textContent = "-- choose field --";
+  fieldSelect.appendChild(empty);
+
+  columns.forEach(col => {
+    const opt = document.createElement("option");
+    opt.value = col;
+    opt.textContent = col;
+    fieldSelect.appendChild(opt);
+  });
+
+  sortContainer.appendChild(fieldSelect);
+
+  // Order selector
+  const orderSelect = document.createElement("select");
+  orderSelect.id = "sort-order-select";
+  orderSelect.classList.add("theme-select");
+  sortContainer.appendChild(orderSelect);
+
+  // Change available options when field changes
+  fieldSelect.addEventListener("change", () => {
+    const selected = fieldSelect.value;
+    orderSelect.innerHTML = "";
+
+    if (!selected) return;
+
+    const field = fieldMap.find(f => f.name === selected);
+    const type = field?.fieldType || "Free-Form Text";
+
+    const TEXT_TYPES = ["Free-Form Text", "List/Record", "multiple-select", "rich-text", "Link", "image"];
+    const NUM_TYPES = ["Currency", "Integer", "Decimal", "Percent", "Float", "Number"];
+    const CHECK_TYPES = ["Checkbox"];
+
+    if (TEXT_TYPES.includes(type)) {
+      orderSelect.appendChild(new Option("A → Z", "asc"));
+      orderSelect.appendChild(new Option("Z → A", "desc"));
+    }
+    else if (NUM_TYPES.includes(type)) {
+      orderSelect.appendChild(new Option("Ascending", "asc"));
+      orderSelect.appendChild(new Option("Descending", "desc"));
+    }
+    else if (CHECK_TYPES.includes(type)) {
+      orderSelect.appendChild(new Option("Checked First", "checked"));
+      orderSelect.appendChild(new Option("Unchecked First", "unchecked"));
+    }
+    else {
+      // fallback
+      orderSelect.appendChild(new Option("A → Z", "asc"));
+      orderSelect.appendChild(new Option("Z → A", "desc"));
+    }
+  });
+
+  // APPLY BUTTON
+  const applyBtn = document.createElement("button");
+  applyBtn.textContent = "Apply";
+  applyBtn.style.padding = "0.4rem 0.8rem";
+  applyBtn.style.border = "none";
+  applyBtn.style.borderRadius = "4px";
+  applyBtn.style.cursor = "pointer";
+
+  applyBtn.addEventListener("click", () => {
+    const field = fieldSelect.value;
+    const order = orderSelect.value;
+
+    if (!field || !order) {
+      alert("Select both a field and sort order.");
+      return;
+    }
+
+    // Safety: prevent sorting huge dataset
+    if (filteredData.length > 2500) {
+      alert("Sorting disabled until filters reduce the dataset.");
+      return;
+    }
+
+    applySort(field, order);
+  });
+
+  sortContainer.appendChild(applyBtn);
+
+  parentContainer.appendChild(sortContainer);
+}
+
+
+
 // --- LOAD DATA ---
 async function loadJSONData() {
   const container = document.getElementById("table-data");
@@ -129,6 +237,7 @@ function renderHistoricalPricingButton(parent) {
 
   parent.appendChild(btn);
 }
+renderSortBar(columns, container);
 
 
     // --- 4) Build table
@@ -779,6 +888,44 @@ function applyBulkAction(column, value, action) {
 
 
 // --- HELPER FUNCTIONS ---
+
+function applySort(field, order) {
+  const fieldMeta = fieldMap.find(f => f.name === field);
+  const type = fieldMeta?.fieldType || "Free-Form Text";
+
+  const getValue = row => {
+    const v = row[field];
+
+    if (v == null) return "";
+
+    if (type === "Checkbox") {
+      return (v === true || v === "true" || v === 1) ? 1 : 0;
+    }
+
+    if (type === "Currency" || type === "Integer" || type === "Decimal" || type === "Percent") {
+      const num = parseFloat(v);
+      return isNaN(num) ? 0 : num;
+    }
+
+    return String(v).toLowerCase();
+  };
+
+  filteredData.sort((a, b) => {
+    const A = getValue(a);
+    const B = getValue(b);
+
+    if (order === "checked") return B - A;
+    if (order === "unchecked") return A - B;
+
+    if (order === "asc") return A > B ? 1 : A < B ? -1 : 0;
+    if (order === "desc") return A < B ? 1 : A > B ? -1 : 0;
+
+    return 0;
+  });
+
+  displayJSONTable(filteredData, { showAll: true });
+}
+
 function updateDisplayedColumns() {
   const checkedBoxes = document.querySelectorAll(
     "#fields-panel input[type='checkbox']:checked"
@@ -789,14 +936,19 @@ function updateDisplayedColumns() {
 // --- APPLY FILTERS (unchanged, compatible with remove buttons) ---
 function applyFilters() {
   const tbody = document.querySelector("#filter-tbody");
+
   if (!tbody) {
     filteredData = [...fullData];
     window.filteredData = filteredData;
-    displayJSONTable(filteredData, { showAll: false }); // no filters → cap 500
+
+    // hide sort bar when nothing filtered
+    const sortBar = document.getElementById("sort-bar");
+    if (sortBar) sortBar.style.display = "none";
+
+    displayJSONTable(filteredData, { showAll: false });
     return;
   }
 
-  // build filter rules from each row
   const rules = [];
   Array.from(tbody.querySelectorAll("tr")).forEach((tr) => {
     const fieldSelect = tr.querySelector("select.filter-field-select");
@@ -805,7 +957,6 @@ function applyFilters() {
     const fieldName = fieldSelect.value;
     if (!fieldName) return;
 
-    // try dropdown first (List/Record)
     const valueSelect = tr.querySelector("select.filter-value-select");
     const valueInput = tr.querySelector("input.filter-value-input");
 
@@ -813,41 +964,43 @@ function applyFilters() {
     if (valueSelect) value = valueSelect.value?.trim() ?? "";
     else if (valueInput) value = valueInput.value?.trim() ?? "";
 
-    // empty value means ignore this rule
     if (!value) return;
 
-    // detect field type
     const fm = fieldMap.find((f) => f.name === fieldName);
     const isListRecord = fm && fm.fieldType === "List/Record";
 
     rules.push({ field: fieldName, value, isListRecord });
   });
 
+  // determine visibility of SORT BAR
+  const sortBar = document.getElementById("sort-bar");
+
   if (rules.length === 0) {
-    // --- No filters → reset to 500 row cap
+    // No filters → default limit
     filteredData = [...fullData];
     window.filteredData = filteredData;
+
+    if (sortBar) sortBar.style.display = "none";
+
     displayJSONTable(filteredData, { showAll: false });
     return;
   }
 
-  // --- Apply AND logic across rules
+  // Filters active → show ALL rows
   filteredData = fullData.filter((row) =>
     rules.every((r) => {
       const cell = row[r.field] != null ? String(row[r.field]) : "";
-      if (r.isListRecord) {
-        // List/Record: exact match on the Name
-        return cell === r.value;
-      } else {
-        // Free text: contains, case-insensitive
-        return cell.toLowerCase().includes(r.value.toLowerCase());
-      }
+      if (r.isListRecord) return cell === r.value;
+      return cell.toLowerCase().includes(r.value.toLowerCase());
     })
   );
 
-  // --- Filters active → show all rows
+  // SHOW SORT BAR because filters are active
+  if (sortBar) sortBar.style.display = "flex";
+
   displayJSONTable(filteredData, { showAll: true });
 }
+
 
 
 // --- TABLE RENDER (with fade-in + resizable columns + safe Link rendering) ---
@@ -1373,11 +1526,21 @@ async function pushUpdates() {
   }
 
   try {
-    const response = await fetch(`${API_BASE}/push-updates`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows: rowsToPush }),
-    });
+// --- Detect expired login session BEFORE parsing JSON ---
+const response = await fetch(`${API_BASE}/push-updates`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ rows: rowsToPush }),
+});
+
+// 🔥 SESSION EXPIRED
+if (response.status === 401) {
+  alert("Login session expired — please re-login and try again.");
+  window.location.href = "/";   // go back to login page
+  return;
+}
+
+
 
     const data = await response.json();
     if (!data.success) {
