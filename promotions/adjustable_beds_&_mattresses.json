@@ -1,0 +1,44 @@
+{
+  "title": "Adjustable beds & mattresses",
+  "sections": [
+    {
+      "label": "Adjustable beds",
+      "color": "",
+      "rows": [
+        {
+          "label": "Adjustable Bases",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "220"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "Adjustable mattresses",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "345"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-12-02T11:10:15.957Z"
+}
