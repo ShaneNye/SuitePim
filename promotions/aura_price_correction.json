@@ -1,0 +1,28 @@
+{
+  "title": "Aura price correction",
+  "sections": [
+    {
+      "label": "Auras",
+      "color": "",
+      "rows": [
+        {
+          "label": "aura mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "310"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-12-02T12:48:40.325Z"
+}
