@@ -1444,7 +1444,7 @@ function applyUpdates() {
   });
 
   // Re-render and restore selections
-  displayJSONTable(filteredData).then(() => {
+  displayJSONTable(filteredData, { showAll: true }).then(() => {
     rows.forEach((rowEl, idx) => {
       const checkbox = rowEl.querySelector('td input[type="checkbox"]');
       if (checkbox && checkbox.checked) {
