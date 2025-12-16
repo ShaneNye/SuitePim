@@ -1,0 +1,51 @@
+{
+  "title": "New Gemstones pricing",
+  "sections": [
+    {
+      "label": "New Gemstones",
+      "color": "",
+      "rows": [
+        {
+          "label": "garnet",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "garnet "
+            }
+          ]
+        },
+        {
+          "label": "Lolite",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Lolite"
+            }
+          ]
+        },
+        {
+          "label": "Amber",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "amber mattress"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-12-16T11:31:48.174Z"
+}
