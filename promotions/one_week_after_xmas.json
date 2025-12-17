@@ -1361,7 +1361,77 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Adjustables",
+      "color": "rgba(103, 91, 91, 0.2)",
+      "rows": [
+        {
+          "label": "Adjustable mattresses",
+          "discount": "35",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        },
+        {
+          "label": "Adjustable bases ",
+          "discount": "35",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            },
+            {
+              "field": "Name",
+              "value": "base"
+            }
+          ]
+        },
+        {
+          "label": "adjustable frames",
+          "discount": "35",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "338"
+            }
+          ]
+        },
+        {
+          "label": "adjustable headboards",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "10"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-11-13T15:47:52.468Z"
+  "savedAt": "2025-12-17T12:02:33.901Z"
 }
