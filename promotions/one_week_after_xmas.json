@@ -722,7 +722,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "cosy nap"
+              "value": "cosy nap mattress :"
             }
           ]
         },
@@ -748,7 +748,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "snooze easy"
+              "value": "snooze easy mattress :"
             }
           ]
         },
@@ -761,7 +761,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "snooze rest"
+              "value": "snooze rest mattress :"
             }
           ]
         },
@@ -774,7 +774,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "snooze calm "
+              "value": "snooze calm mattress :"
             }
           ]
         },
@@ -787,7 +787,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "Duke comfort "
+              "value": "Duke comfort mattress :"
             }
           ]
         },
@@ -971,7 +971,7 @@
             },
             {
               "field": "Name",
-              "value": "nova balance "
+              "value": "nova balance mattress :"
             }
           ]
         },
@@ -988,7 +988,7 @@
             },
             {
               "field": "Name",
-              "value": "nova comfort "
+              "value": "nova comfort mattress :"
             }
           ]
         },
@@ -1005,7 +1005,7 @@
             },
             {
               "field": "Name",
-              "value": "nova ortho "
+              "value": "nova ortho mattress :"
             }
           ]
         },
@@ -1022,7 +1022,7 @@
             },
             {
               "field": "Name",
-              "value": "nova soothe "
+              "value": "nova soothe mattress :"
             }
           ]
         }
@@ -1033,7 +1033,7 @@
       "color": "rgba(234, 107, 98, 0.2)",
       "rows": [
         {
-          "label": "Burley Mattress ",
+          "label": "Burley Mattress :",
           "discount": "60",
           "pos": "",
           "discPos": "",
@@ -1206,20 +1206,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "rosaline"
-            }
-          ]
-        },
-        {
-          "label": "Morion Mattress",
-          "discount": "40",
-          "pos": "",
-          "discPos": "",
-          "other": "",
-          "filters": [
-            {
-              "field": "Name",
-              "value": "morion"
+              "value": "rosaline mattress : "
             }
           ]
         },
@@ -1262,7 +1249,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "amatrix"
+              "value": "amatrix mattress :"
             }
           ]
         },
@@ -1275,7 +1262,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "citrine"
+              "value": "citrine mattress :"
             }
           ]
         },
@@ -1288,7 +1275,7 @@
           "filters": [
             {
               "field": "Name",
-              "value": "ironstone"
+              "value": "ironstone mattress :"
             }
           ]
         },
@@ -1357,6 +1344,19 @@
             {
               "field": "Name",
               "value": "lolite"
+            }
+          ]
+        },
+        {
+          "label": "Morion",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Morion mattress :"
             }
           ]
         }
@@ -1433,5 +1433,5 @@
       ]
     }
   ],
-  "savedAt": "2025-12-17T12:02:51.241Z"
+  "savedAt": "2025-12-18T15:06:12.919Z"
 }
