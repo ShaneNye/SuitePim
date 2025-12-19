@@ -1431,7 +1431,39 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Jet & Ebony",
+      "color": "",
+      "rows": [
+        {
+          "label": "Ebony",
+          "discount": "70",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ebony natural mattress"
+            }
+          ]
+        },
+        {
+          "label": "Jet Memory",
+          "discount": "70",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Jet Memory"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-12-18T16:14:44.658Z"
+  "savedAt": "2025-12-19T10:56:32.801Z"
 }
