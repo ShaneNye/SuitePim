@@ -1463,7 +1463,39 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Adjust a Bed Frames",
+      "color": "",
+      "rows": [
+        {
+          "label": "Buttermere",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Buttermere"
+            }
+          ]
+        },
+        {
+          "label": "Seacale",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "seacale"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2025-12-19T10:57:38.971Z"
+  "savedAt": "2025-12-19T11:08:21.949Z"
 }
