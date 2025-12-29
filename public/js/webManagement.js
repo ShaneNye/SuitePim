@@ -311,8 +311,7 @@ async function renderFilterPanel(columns, parent) {
 
         valueTd.appendChild(select);
 
-      }
-      else if (field && field.fieldType === "multiple-select") {
+      } else if (field && field.fieldType === "multiple-select") {
         // Reuse the existing table multi-select modal (#multi-select-modal)
         const btn = document.createElement("button");
         btn.type = "button";
@@ -446,6 +445,7 @@ async function renderFilterPanel(columns, parent) {
               }
             });
 
+            // ✅ Persist both IDs and names on the button (Apply Filters reads names; IDs kept for future use)
             btn.dataset.ids = JSON.stringify(ids);
             btn.dataset.names = JSON.stringify(dedupedNames);
 
@@ -458,6 +458,7 @@ async function renderFilterPanel(columns, parent) {
         valueTd.appendChild(btn);
         valueTd.appendChild(preview);
       }
+
 
       else {
         const input = document.createElement("input");
