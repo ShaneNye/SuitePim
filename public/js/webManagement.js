@@ -311,7 +311,155 @@ async function renderFilterPanel(columns, parent) {
 
         valueTd.appendChild(select);
 
-      } else {
+      }
+      else if (field && field.fieldType === "multiple-select") {
+        // Reuse the existing table multi-select modal (#multi-select-modal)
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.classList.add("filter-multi-btn");
+        btn.textContent = "Select";
+        btn.dataset.field = selectedFieldName;
+
+        // Store selection on the button (JSON strings)
+        btn.dataset.names = btn.dataset.names || "[]";
+        btn.dataset.ids = btn.dataset.ids || "[]";
+
+        const preview = document.createElement("span");
+        preview.classList.add("filter-multi-preview");
+        preview.style.marginLeft = "8px";
+        preview.style.fontStyle = "italic";
+
+        const renderPreview = () => {
+          let names = [];
+          try { names = JSON.parse(btn.dataset.names || "[]"); } catch { names = []; }
+          preview.textContent = names.length ? names.join(", ") : "(no values selected)";
+          btn.textContent = names.length ? `Select (${names.length})` : "Select";
+        };
+
+        btn.addEventListener("click", async () => {
+          const modal = document.getElementById("multi-select-modal");
+          if (!modal) {
+            alert("Multi-select modal not found. (It is created when the table is rendered.)");
+            return;
+          }
+
+          const modalTitle = modal.querySelector("#multi-select-title");
+          const modalSearch = modal.querySelector("#multi-search");
+          const modalOptions = modal.querySelector(".multi-select-options");
+          const modalSave = modal.querySelector("#multi-save");
+          const modalCancel = modal.querySelector("#multi-cancel");
+
+          modal.classList.remove("hidden");
+          modalOptions.innerHTML = "";
+          modalSearch.value = "";
+
+          const options = await getListOptions(field);
+
+          // Current selected IDs from this filter button
+          let selectedIds = [];
+          try { selectedIds = JSON.parse(btn.dataset.ids || "[]").map(String); } catch { selectedIds = []; }
+
+          const normalizeName = (str) =>
+            (str || "")
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, " ")
+              .trim();
+
+          const stripPrefix = (str) => {
+            const parts = String(str || "").split(":");
+            return parts.length > 1 ? parts[parts.length - 1].trim() : String(str || "");
+          };
+
+          const renderList = (term = "") => {
+            modalOptions.innerHTML = "";
+            const lc = term.toLowerCase().trim();
+
+            const filtered = options.filter(o =>
+              ((o["Name"] || o.name || "")).toLowerCase().includes(lc)
+            );
+
+            // Checked first
+            const set = new Set(selectedIds.map(String));
+            const ordered = [
+              ...filtered.filter(o => set.has(String(o["Internal ID"] || o.id))),
+              ...filtered.filter(o => !set.has(String(o["Internal ID"] || o.id))),
+            ];
+
+            ordered.forEach(opt => {
+              const optId = String(opt["Internal ID"] || opt.id);
+              const optName = (opt["Name"] || opt.name || "");
+
+              const label = document.createElement("label");
+              label.style.display = "flex";
+              label.style.alignItems = "center";
+              label.style.gap = "6px";
+
+              const cb = document.createElement("input");
+              cb.type = "checkbox";
+              cb.value = optId;
+              cb.checked = set.has(optId);
+
+              cb.addEventListener("change", () => {
+                if (cb.checked) {
+                  if (!selectedIds.includes(optId)) selectedIds.push(optId);
+                } else {
+                  selectedIds = selectedIds.filter(x => x !== optId);
+                }
+                if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
+              });
+
+              label.appendChild(cb);
+              label.appendChild(document.createTextNode(optName));
+              modalOptions.appendChild(label);
+            });
+
+            if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
+          };
+
+          renderList();
+          modalSearch.oninput = () => renderList(modalSearch.value);
+
+          // IMPORTANT: overwrite modal handlers each time this filter opens it
+          modalCancel.onclick = () => {
+            modal.classList.add("hidden");
+          };
+
+          modalSave.onclick = () => {
+            const ids = selectedIds.map(String);
+
+            // Convert IDs -> names (store names for filtering)
+            const names = ids.map(id => {
+              const match = options.find(o => String(o["Internal ID"] || o.id) === id);
+              return match ? (match["Name"] || match.name || "") : "";
+            }).filter(Boolean);
+
+            // Optional: ensure no duplicates by normalized name (handles prefix variants)
+            const seen = new Set();
+            const dedupedNames = [];
+            names.forEach(n => {
+              const key1 = normalizeName(n);
+              const key2 = normalizeName(stripPrefix(n));
+              const key = key2 && key2 !== key1 ? `${key1}|${key2}` : key1;
+              if (!seen.has(key)) {
+                seen.add(key);
+                dedupedNames.push(n);
+              }
+            });
+
+            btn.dataset.ids = JSON.stringify(ids);
+            btn.dataset.names = JSON.stringify(dedupedNames);
+
+            renderPreview();
+            modal.classList.add("hidden");
+          };
+        });
+
+        renderPreview();
+        valueTd.appendChild(btn);
+        valueTd.appendChild(preview);
+      }
+
+      else {
         const input = document.createElement("input");
         input.type = "text";
         input.classList.add("filter-value-input");
@@ -1231,12 +1379,12 @@ function updateDisplayedColumns() {
   displayedColumns = Array.from(checkedBoxes).map((cb) => cb.dataset.column);
 }
 
-// --- APPLY FILTERS (unchanged, compatible with remove buttons) ---
+// --- APPLY FILTERS (compatible with remove buttons + supports multiple-select modal filters) ---
 function applyFilters() {
   const tbody = document.querySelector("#filter-tbody");
   if (!tbody) {
     filteredData = [...fullData];
-    displayJSONTable(filteredData, { showAll: false }); // no filters → cap 500
+    displayJSONTable(filteredData, { showAll: false }); // no filters → cap MAX_ROWS
     return;
   }
 
@@ -1249,7 +1397,26 @@ function applyFilters() {
     const fieldName = fieldSelect.value;
     if (!fieldName) return;
 
-    // try dropdown first (List/Record)
+    // detect field type
+    const fm = fieldMap.find((f) => f.name === fieldName);
+
+    // ✅ MULTIPLE-SELECT: read selected values from the filter button dataset
+    if (fm && fm.fieldType === "multiple-select") {
+      const btn = tr.querySelector("button.filter-multi-btn");
+      if (!btn) return;
+
+      let values = [];
+      try { values = JSON.parse(btn.dataset.names || "[]"); } catch { values = []; }
+      values = Array.isArray(values) ? values.filter(Boolean) : [];
+
+      // ignore empty selection
+      if (!values.length) return;
+
+      rules.push({ field: fieldName, isMulti: true, values });
+      return; // IMPORTANT: do not continue into text/select handling
+    }
+
+    // Existing controls for List/Record + Checkbox + text
     const valueSelect = tr.querySelector("select.filter-value-select");
     const valueInput = tr.querySelector("input.filter-value-input");
 
@@ -1260,37 +1427,69 @@ function applyFilters() {
     // empty value means ignore this rule
     if (!value) return;
 
-    // detect field type
-    const fm = fieldMap.find((f) => f.name === fieldName);
     const isListRecord = fm && fm.fieldType === "List/Record";
+    const isCheckbox = fm && fm.fieldType === "Checkbox";
 
-    rules.push({ field: fieldName, value, isListRecord });
+    rules.push({ field: fieldName, isMulti: false, isListRecord, isCheckbox, value });
   });
 
   if (rules.length === 0) {
-    // --- No filters → reset to 500 row cap
+    // --- No filters → reset to MAX_ROWS cap
     filteredData = [...fullData];
     displayJSONTable(filteredData, { showAll: false });
     return;
   }
 
+  const normalize = (s) =>
+    String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+  const stripPrefix = (s) => {
+    const parts = String(s || "").split(":");
+    return parts.length > 1 ? parts[parts.length - 1].trim() : String(s || "");
+  };
+
   // --- Apply AND logic across rules
   filteredData = fullData.filter((row) =>
     rules.every((r) => {
-      const cell = row[r.field] != null ? String(row[r.field]) : "";
-      if (r.isListRecord) {
-        // List/Record: exact match on the Name
-        return cell === r.value;
-      } else {
-        // Free text: contains, case-insensitive
-        return cell.toLowerCase().includes(r.value.toLowerCase());
+      // ✅ MULTI-SELECT: row value is an array of names (you normalize this on load)
+      if (r.isMulti) {
+        const arr = Array.isArray(row[r.field]) ? row[r.field] : [];
+        if (!arr.length) return false;
+
+        const rowNorms = new Set(arr.flatMap(v => [normalize(v), normalize(stripPrefix(v))]));
+
+        // ANY selected value matches
+        return r.values.some(v =>
+          rowNorms.has(normalize(v)) || rowNorms.has(normalize(stripPrefix(v)))
+        );
       }
+
+      // Checkbox: exact boolean match against "true"/"false"
+      if (r.isCheckbox) {
+        const want = String(r.value).toLowerCase() === "true";
+        const got =
+          row[r.field] === true ||
+          row[r.field] === 1 ||
+          ["true", "t", "1", "y", "yes"].includes(String(row[r.field] || "").trim().toLowerCase());
+        return got === want;
+      }
+
+      const cell = row[r.field] != null ? String(row[r.field]) : "";
+
+      // List/Record: exact match on the Name
+      if (r.isListRecord) {
+        return cell === r.value;
+      }
+
+      // Free text: contains, case-insensitive
+      return cell.toLowerCase().includes(String(r.value).toLowerCase());
     })
   );
 
   // --- Filters active → show all rows
   displayJSONTable(filteredData, { showAll: true });
 }
+
 
 
 // --- TABLE RENDER (with fade-in + resizable columns + safe Link rendering + multiple-select modal + image thumbnails with change button) ---
