@@ -863,7 +863,17 @@ function applyBulkAction(column, value, action) {
 
     // Save & sync baseline for reliable future detection
     filteredData[rowIndex] = rowData;
-    if (Array.isArray(baselineData)) baselineData[rowIndex] = { ...rowData };
+   /* if (Array.isArray(baselineData)) baselineData[rowIndex] = { ...rowData }; */
+
+const internalId = rowData["Internal ID"];
+if (internalId != null) {
+  const fullIdx = fullData.findIndex(
+    (r) => String(r["Internal ID"]) === String(internalId)
+  );
+  if (fullIdx > -1) {
+    fullData[fullIdx] = { ...fullData[fullIdx], ...rowData };
+  }
+}
   });
 
   // ✅ Force all filtered rows to render after bulk change

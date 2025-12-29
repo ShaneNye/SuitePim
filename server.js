@@ -86,7 +86,6 @@ const PORT = process.env.PORT || 3000;
 
 
 app.get("/fonts/:file", (req, res, next) => {
-  console.log("🔎 Font requested:", req.params.file);
   next();
 });
 
