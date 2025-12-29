@@ -311,153 +311,154 @@ async function renderFilterPanel(columns, parent) {
 
         valueTd.appendChild(select);
 
-      } else if (field && field.fieldType === "multiple-select") {
-        // Reuse the existing table multi-select modal (#multi-select-modal)
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.classList.add("filter-multi-btn");
-        btn.textContent = "Select";
-        btn.dataset.field = selectedFieldName;
+} else if (field && field.fieldType === "multiple-select") {
+  // Reuse the existing table multi-select modal (#multi-select-modal)
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.classList.add("filter-multi-btn");
+  btn.textContent = "Select";
+  btn.dataset.field = selectedFieldName;
 
-        // Store selection on the button (JSON strings)
-        btn.dataset.names = btn.dataset.names || "[]";
-        btn.dataset.ids = btn.dataset.ids || "[]";
+  // Store selection on the button (JSON strings)
+  btn.dataset.names = btn.dataset.names || "[]";
+  btn.dataset.ids = btn.dataset.ids || "[]";
 
-        const preview = document.createElement("span");
-        preview.classList.add("filter-multi-preview");
-        preview.style.marginLeft = "8px";
-        preview.style.fontStyle = "italic";
+  const preview = document.createElement("span");
+  preview.classList.add("filter-multi-preview");
+  preview.style.marginLeft = "8px";
+  preview.style.fontStyle = "italic";
 
-        const renderPreview = () => {
-          let names = [];
-          try { names = JSON.parse(btn.dataset.names || "[]"); } catch { names = []; }
-          preview.textContent = names.length ? names.join(", ") : "(no values selected)";
-          btn.textContent = names.length ? `Select (${names.length})` : "Select";
-        };
+  const renderPreview = () => {
+    let names = [];
+    try { names = JSON.parse(btn.dataset.names || "[]"); } catch { names = []; }
+    preview.textContent = names.length ? names.join(", ") : "(no values selected)";
+    btn.textContent = names.length ? `Select (${names.length})` : "Select";
+  };
 
-        btn.addEventListener("click", async () => {
-          const modal = document.getElementById("multi-select-modal");
-          if (!modal) {
-            alert("Multi-select modal not found. (It is created when the table is rendered.)");
-            return;
+  btn.addEventListener("click", async () => {
+    const modal = document.getElementById("multi-select-modal");
+    if (!modal) {
+      alert("Multi-select modal not found. (It is created when the table is rendered.)");
+      return;
+    }
+
+    const modalTitle = modal.querySelector("#multi-select-title");
+    const modalSearch = modal.querySelector("#multi-search");
+    const modalOptions = modal.querySelector(".multi-select-options");
+    const modalSave = modal.querySelector("#multi-save");
+    const modalCancel = modal.querySelector("#multi-cancel");
+
+    modal.classList.remove("hidden");
+    modalOptions.innerHTML = "";
+    modalSearch.value = "";
+
+    const options = await getListOptions(field);
+
+    // Current selected IDs from this filter button
+    let selectedIds = [];
+    try { selectedIds = JSON.parse(btn.dataset.ids || "[]").map(String); } catch { selectedIds = []; }
+
+    const normalizeName = (str) =>
+      (str || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+    const stripPrefix = (str) => {
+      const parts = String(str || "").split(":");
+      return parts.length > 1 ? parts[parts.length - 1].trim() : String(str || "");
+    };
+
+    const renderList = (term = "") => {
+      modalOptions.innerHTML = "";
+      const lc = term.toLowerCase().trim();
+
+      const filtered = options.filter(o =>
+        ((o["Name"] || o.name || "")).toLowerCase().includes(lc)
+      );
+
+      // Checked first
+      const set = new Set(selectedIds.map(String));
+      const ordered = [
+        ...filtered.filter(o => set.has(String(o["Internal ID"] || o.id))),
+        ...filtered.filter(o => !set.has(String(o["Internal ID"] || o.id))),
+      ];
+
+      ordered.forEach(opt => {
+        const optId = String(opt["Internal ID"] || opt.id);
+        const optName = (opt["Name"] || opt.name || "");
+
+        const label = document.createElement("label");
+        label.style.display = "flex";
+        label.style.alignItems = "center";
+        label.style.gap = "6px";
+
+        const cb = document.createElement("input");
+        cb.type = "checkbox";
+        cb.value = optId;
+        cb.checked = set.has(optId);
+
+        cb.addEventListener("change", () => {
+          if (cb.checked) {
+            if (!selectedIds.includes(optId)) selectedIds.push(optId);
+          } else {
+            selectedIds = selectedIds.filter(x => x !== optId);
           }
-
-          const modalTitle = modal.querySelector("#multi-select-title");
-          const modalSearch = modal.querySelector("#multi-search");
-          const modalOptions = modal.querySelector(".multi-select-options");
-          const modalSave = modal.querySelector("#multi-save");
-          const modalCancel = modal.querySelector("#multi-cancel");
-
-          modal.classList.remove("hidden");
-          modalOptions.innerHTML = "";
-          modalSearch.value = "";
-
-          const options = await getListOptions(field);
-
-          // Current selected IDs from this filter button
-          let selectedIds = [];
-          try { selectedIds = JSON.parse(btn.dataset.ids || "[]").map(String); } catch { selectedIds = []; }
-
-          const normalizeName = (str) =>
-            (str || "")
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, " ")
-              .trim();
-
-          const stripPrefix = (str) => {
-            const parts = String(str || "").split(":");
-            return parts.length > 1 ? parts[parts.length - 1].trim() : String(str || "");
-          };
-
-          const renderList = (term = "") => {
-            modalOptions.innerHTML = "";
-            const lc = term.toLowerCase().trim();
-
-            const filtered = options.filter(o =>
-              ((o["Name"] || o.name || "")).toLowerCase().includes(lc)
-            );
-
-            // Checked first
-            const set = new Set(selectedIds.map(String));
-            const ordered = [
-              ...filtered.filter(o => set.has(String(o["Internal ID"] || o.id))),
-              ...filtered.filter(o => !set.has(String(o["Internal ID"] || o.id))),
-            ];
-
-            ordered.forEach(opt => {
-              const optId = String(opt["Internal ID"] || opt.id);
-              const optName = (opt["Name"] || opt.name || "");
-
-              const label = document.createElement("label");
-              label.style.display = "flex";
-              label.style.alignItems = "center";
-              label.style.gap = "6px";
-
-              const cb = document.createElement("input");
-              cb.type = "checkbox";
-              cb.value = optId;
-              cb.checked = set.has(optId);
-
-              cb.addEventListener("change", () => {
-                if (cb.checked) {
-                  if (!selectedIds.includes(optId)) selectedIds.push(optId);
-                } else {
-                  selectedIds = selectedIds.filter(x => x !== optId);
-                }
-                if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
-              });
-
-              label.appendChild(cb);
-              label.appendChild(document.createTextNode(optName));
-              modalOptions.appendChild(label);
-            });
-
-            if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
-          };
-
-          renderList();
-          modalSearch.oninput = () => renderList(modalSearch.value);
-
-          // IMPORTANT: overwrite modal handlers each time this filter opens it
-          modalCancel.onclick = () => {
-            modal.classList.add("hidden");
-          };
-
-          modalSave.onclick = () => {
-            const ids = selectedIds.map(String);
-
-            // Convert IDs -> names (store names for filtering)
-            const names = ids.map(id => {
-              const match = options.find(o => String(o["Internal ID"] || o.id) === id);
-              return match ? (match["Name"] || match.name || "") : "";
-            }).filter(Boolean);
-
-            // Optional: ensure no duplicates by normalized name (handles prefix variants)
-            const seen = new Set();
-            const dedupedNames = [];
-            names.forEach(n => {
-              const key1 = normalizeName(n);
-              const key2 = normalizeName(stripPrefix(n));
-              const key = key2 && key2 !== key1 ? `${key1}|${key2}` : key1;
-              if (!seen.has(key)) {
-                seen.add(key);
-                dedupedNames.push(n);
-              }
-            });
-
-            // ✅ Persist both IDs and names on the button (Apply Filters reads names; IDs kept for future use)
-            btn.dataset.ids = JSON.stringify(ids);
-            btn.dataset.names = JSON.stringify(dedupedNames);
-
-            renderPreview();
-            modal.classList.add("hidden");
-          };
+          if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
         });
 
-        renderPreview();
-        valueTd.appendChild(btn);
-        valueTd.appendChild(preview);
-      }
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(optName));
+        modalOptions.appendChild(label);
+      });
+
+      if (modalTitle) modalTitle.textContent = `Filter: ${selectedFieldName} (${selectedIds.length} selected)`;
+    };
+
+    renderList();
+    modalSearch.oninput = () => renderList(modalSearch.value);
+
+    // IMPORTANT: overwrite modal handlers each time this filter opens it
+    modalCancel.onclick = () => {
+      modal.classList.add("hidden");
+    };
+
+    modalSave.onclick = () => {
+      const ids = selectedIds.map(String);
+
+      // Convert IDs -> names (store names for filtering)
+      const names = ids.map(id => {
+        const match = options.find(o => String(o["Internal ID"] || o.id) === id);
+        return match ? (match["Name"] || match.name || "") : "";
+      }).filter(Boolean);
+
+      // Optional: ensure no duplicates by normalized name (handles prefix variants)
+      const seen = new Set();
+      const dedupedNames = [];
+      names.forEach(n => {
+        const key1 = normalizeName(n);
+        const key2 = normalizeName(stripPrefix(n));
+        const key = key2 && key2 !== key1 ? `${key1}|${key2}` : key1;
+        if (!seen.has(key)) {
+          seen.add(key);
+          dedupedNames.push(n);
+        }
+      });
+
+      // ✅ Persist both IDs and names on the button (Apply Filters reads names; IDs kept for future use)
+      btn.dataset.ids = JSON.stringify(ids);
+      btn.dataset.names = JSON.stringify(dedupedNames);
+
+      renderPreview();
+      modal.classList.add("hidden");
+    };
+  });
+
+  renderPreview();
+  valueTd.appendChild(btn);
+  valueTd.appendChild(preview);
+}
+
 
 
       else {
