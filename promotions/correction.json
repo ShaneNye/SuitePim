@@ -1,0 +1,114 @@
+{
+  "title": "Correction",
+  "sections": [
+    {
+      "label": "Vio Sleeps",
+      "color": "",
+      "rows": [
+        {
+          "label": "Earth Care ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "earth "
+            }
+          ]
+        },
+        {
+          "label": "Flora Care ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "flora"
+            }
+          ]
+        },
+        {
+          "label": "Ocean Care",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "Ocean"
+            }
+          ]
+        },
+        {
+          "label": "Forest Care ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "forest"
+            }
+          ]
+        },
+        {
+          "label": "Meadow Care ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "meadow"
+            }
+          ]
+        },
+        {
+          "label": "Haven Care ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "haven"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2025-12-29T10:21:11.466Z"
+}
