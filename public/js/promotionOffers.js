@@ -257,56 +257,98 @@ function renderPromotionUI(container, data = null) {
   wrapper.appendChild(addSectionBtn);
 
   // --- Prefill if editing an existing promotion ---
-  if (data) {
-    if (data.title) {
-      titleWrap.innerHTML = `
-        <h2 class="promo-title-text">${data.title}</h2>
-        <button class="btn small edit-btn">✏️</button>
-        <button class="btn small save-json-btn">💾 Save</button>
-        <button class="btn small push-btn">📤 Push</button>
-      `;
-      titleWrap.querySelector(".save-json-btn").onclick = () => savePromotion(wrapper);
-      titleWrap.querySelector(".edit-btn").onclick = () => {
-        titleWrap.innerHTML = "";
-        titleWrap.appendChild(titleInput);
-        titleWrap.appendChild(saveBtn);
-      };
-      titleWrap.querySelector(".push-btn").onclick = async () => {
-        const products = collectProductsForPush(wrapper);
-        if (!products.length) {
-          alert("❌ No products found to push.");
-          return;
-        }
-        try {
-          const res = await fetch("/push-promotion", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ rows: products }),
-          });
-          const json = await res.json();
-          if (res.ok) {
-            localStorage.setItem("lastJobId", json.jobId);
-            checkFooterJobStatus();
+if (data) {
+  if (data.title) {
+    titleWrap.innerHTML = `
+      <h2 class="promo-title-text">${data.title}</h2>
+      <button class="btn small edit-btn">✏️</button>
+      <button class="btn small save-json-btn">💾 Save</button>
+      <button class="btn small push-btn">📤 Push</button>
+      <button class="btn small danger delete-btn">🗑 Delete</button>
+    `;
 
-            alert(
-              `✅ Promotion push queued with ${products.length} product(s).\nJob ID: ${json.jobId}\nQueue Position: ${json.queuePos}/${json.queueTotal}`
-            );
-          } else {
-            console.error("Push enqueue failed:", json);
-            alert("❌ Push failed to enqueue: " + (json.error || "Unknown error"));
-          }
-        } catch (err) {
-          console.error("Push enqueue error:", err);
-          alert("❌ Push enqueue error — see console");
+    titleWrap.querySelector(".save-json-btn").onclick = () => savePromotion(wrapper);
+
+    titleWrap.querySelector(".edit-btn").onclick = () => {
+      titleWrap.innerHTML = "";
+      titleWrap.appendChild(titleInput);
+      titleWrap.appendChild(saveBtn);
+    };
+
+    titleWrap.querySelector(".push-btn").onclick = async () => {
+      const products = collectProductsForPush(wrapper);
+      if (!products.length) {
+        alert("❌ No products found to push.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/push-promotion", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: products }),
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+          localStorage.setItem("lastJobId", json.jobId);
+          checkFooterJobStatus();
+
+          alert(
+            `✅ Promotion push queued with ${products.length} product(s).\nJob ID: ${json.jobId}\nQueue Position: ${json.queuePos}/${json.queueTotal}`
+          );
+        } else {
+          console.error("Push enqueue failed:", json);
+          alert("❌ Push failed to enqueue: " + (json.error || "Unknown error"));
         }
-      };
-    }
+      } catch (err) {
+        console.error("Push enqueue error:", err);
+        alert("❌ Push enqueue error — see console");
+      }
+    };
+
+    // 🗑 Delete JSON from GitHub
+    titleWrap.querySelector(".delete-btn").onclick = async () => {
+      const confirmed = confirm(
+        "⚠️ Are you sure you want to delete this promotion?\n\nThis action cannot be undone."
+      );
+      if (!confirmed) return;
+
+      // Must match the filename logic used when saving
+      const promoName = data.title.replace(/\s+/g, "_").toLowerCase();
+
+      try {
+        const res = await fetch(`/api/promotions/${encodeURIComponent(promoName)}`, {
+          method: "DELETE",
+        });
+
+        const json = await res.json();
+        if (res.ok) {
+          alert("🗑 Promotion deleted");
+          loadPromotionList();
+
+          // Clear editor + rebuild fresh UI
+          const editor = document.getElementById("promo-editor");
+          editor.innerHTML = "";
+          renderPromotionUI(editor);
+        } else {
+          console.error("Delete failed:", json);
+          alert("❌ Delete failed: " + (json.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error("Delete error:", err);
+        alert("❌ Delete error — see console");
+      }
+    };
+  }
 
     // ✅ Restore saved sections with label + color
-    (data.sections || []).forEach((sec) => {
-      const section = createSection(wrapper, sec.label, sec.color || "");
-      (sec.rows || []).forEach((row) => createRow(section, row));
-    });
+(data.sections || []).forEach((sec) => {
+  // ✅ collapsed by default when loading a saved promotion
+  const section = createSection(wrapper, sec.label, sec.color || "", { startCollapsed: true });
+  (sec.rows || []).forEach((row) => createRow(section, row));
+});
+
   }
 }
 
@@ -314,7 +356,9 @@ function renderPromotionUI(container, data = null) {
 
 
 // --- CREATE SECTION ---
-function createSection(container, labelVal = "", colorVal = "") {
+function createSection(container, labelVal = "", colorVal = "", opts = {}) {
+  const { startCollapsed = false } = opts;
+
   const section = document.createElement("div");
   section.className = "promo-section";
 
@@ -336,6 +380,60 @@ function createSection(container, labelVal = "", colorVal = "") {
   addRowBtn.className = "btn";
   addRowBtn.onclick = () => createRow(section);
 
+  // 📤 Push Section button
+  const pushSectionBtn = document.createElement("button");
+  pushSectionBtn.textContent = "📤 Push Section";
+  pushSectionBtn.className = "btn small";
+  pushSectionBtn.title = "Push only this section";
+
+  pushSectionBtn.onclick = async () => {
+    const products = collectProductsForPushFromSection(section);
+    if (!products.length) {
+      alert("❌ No products found to push in this section.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/push-promotion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: products }),
+      });
+
+      const json = await res.json();
+      if (res.ok) {
+        localStorage.setItem("lastJobId", json.jobId);
+        checkFooterJobStatus();
+
+        alert(
+          `✅ Section push queued with ${products.length} product(s).\nJob ID: ${json.jobId}\nQueue Position: ${json.queuePos}/${json.queueTotal}`
+        );
+      } else {
+        console.error("Section push enqueue failed:", json);
+        alert("❌ Section push failed to enqueue: " + (json.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Section push enqueue error:", err);
+      alert("❌ Section push enqueue error — see console");
+    }
+  };
+
+  // ✅ Collapse/Expand button
+  const toggleBtn = document.createElement("button");
+  toggleBtn.className = "btn small collapse-btn";
+  toggleBtn.title = "Collapse/Expand section";
+  toggleBtn.textContent = "▼"; // ensures it appears immediately
+
+  const setCollapsedUI = (collapsed) => {
+    section.classList.toggle("is-collapsed", collapsed);
+    toggleBtn.textContent = collapsed ? "▶" : "▼";
+  };
+
+  toggleBtn.onclick = () => {
+    const isCollapsed = section.classList.contains("is-collapsed");
+    setCollapsedUI(!isCollapsed);
+  };
+
   // 🎨 Palette button
   const paletteBtn = document.createElement("button");
   paletteBtn.textContent = "🎨";
@@ -349,14 +447,21 @@ function createSection(container, labelVal = "", colorVal = "") {
 
   header.appendChild(labelInput);
   header.appendChild(addRowBtn);
+  header.appendChild(pushSectionBtn); // ✅ new
+  header.appendChild(toggleBtn);
   header.appendChild(paletteBtn);
   header.appendChild(removeBtn);
 
   section.appendChild(header);
   container.appendChild(section);
 
+  // ✅ set default state
+  setCollapsedUI(!!startCollapsed);
+
   return section;
 }
+
+
 
 // --- helper to preload list options for filters ---
 async function preloadFilterOptions(filters) {
@@ -1050,7 +1155,73 @@ function collectProductsForPush(wrapper) {
   return products;
 }
 
+function collectProductsForPushFromSection(sectionEl) {
+  const products = [];
 
+  sectionEl.querySelectorAll(".promo-row").forEach((row) => {
+    const filters = JSON.parse(row.dataset.filters || "[]");
+    const discountInput = row.querySelector(".discount-input");
+    const discount = discountInput ? parseFloat(discountInput.value) || 0 : 0;
+
+    const matched = fullData.filter((prod) =>
+      filters.every((f) => {
+        const field = fieldMap.find((fld) => fld.name === f.field);
+        if (!field) return true;
+
+        // List/Record or multiple-select fields
+        if (field.jsonFeed && (field.fieldType === "List/Record" || field.fieldType === "multiple-select")) {
+          const options = listCache[field.name] || [];
+          if (!options.length) return false;
+
+          const prodVals = String(prod[f.field] || "")
+            .split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean);
+
+          const prodIds = prodVals
+            .map((val) => {
+              let match = options.find((opt) => (opt.Name || "").toLowerCase() === val);
+              if (!match) match = options.find((opt) => (opt.Name || "").toLowerCase().endsWith(val));
+              return match ? String(match["Internal ID"]) : null;
+            })
+            .filter(Boolean);
+
+          const selectedIds = f.ids || (f.value ? [f.value] : []);
+          if (!prodIds.length) return false;
+
+          return f.mode === "all"
+            ? selectedIds.every((id) => prodIds.includes(id))
+            : selectedIds.some((id) => prodIds.includes(id));
+        }
+
+        // Checkbox
+        if (field.fieldType === "Checkbox") {
+          const val = String(prod[f.field]).toLowerCase();
+          return f.value === "" || val === f.value.toLowerCase();
+        }
+
+        // Free-text fallback
+        return String(prod[f.field] || "")
+          .toLowerCase()
+          .includes(String(f.value).toLowerCase());
+      })
+    );
+
+    matched.forEach((prod) => {
+      const base = parseFloat(prod["Base Price"]) || 0;
+      const sale = base * (1 - discount / 100);
+
+      products.push({
+        id: prod["Internal ID"],
+        wooId: prod["Woo ID"],
+        basePrice: base.toFixed(2),
+        salePrice: sale.toFixed(2),
+      });
+    });
+  });
+
+  return products;
+}
 
 
 

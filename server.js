@@ -667,6 +667,52 @@ app.get("/api/promotions/:name", async (req, res) => {
   }
 });
 
+// --- DELETE PROMOTION ---
+app.delete("/api/promotions/:name", authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.params;
+    const path = `promotions/${name}.json`;
+    const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+
+    // 1️⃣ Get SHA
+    const existingRes = await fetch(apiUrl, {
+      headers: { Authorization: `token ${GITHUB_TOKEN}` },
+    });
+
+    if (!existingRes.ok) {
+      return res.status(404).json({ error: "Promotion file not found" });
+    }
+
+    const existing = await existingRes.json();
+
+    // 2️⃣ Delete file
+    const ghRes = await fetch(apiUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        message: `Delete promotion ${name}.json`,
+        sha: existing.sha,
+      }),
+    });
+
+    if (!ghRes.ok) {
+      const err = await ghRes.json();
+      console.error("❌ GitHub delete failed:", err);
+      return res.status(500).json({ error: "GitHub delete failed", details: err });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Delete promotion error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
 // --- LIST PRICING SNAPSHOTS (auto-cleanup files older than 90 days) ---
 app.get("/api/pricing", async (req, res) => {
   try {
@@ -854,7 +900,7 @@ app.post("/logout", (req, res) => {
 /* -----------------------------
    Static pages
 ------------------------------*/
- app.get("/home.html", authMiddleware, (req, res) => {
+app.get("/home.html", authMiddleware, (req, res) => {
   res.sendFile(join(__dirname, "public", "home.html"));
 });
 
@@ -1101,8 +1147,8 @@ app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
           r.field === "INVTITEM.PRICELIST"
             ? "Base Price"
             : r.field === "INVTITEM.COST"
-            ? "Purchase Price"
-            : r.field;
+              ? "Purchase Price"
+              : r.field;
 
         return {
           Date: r.date,
