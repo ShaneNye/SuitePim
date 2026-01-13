@@ -39,6 +39,11 @@ const mapenvironment = [
     name: "Web Images",
     SandboxUrl: "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4072&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQJitxmFxKycziSYTCbda2g5B5wOaeadZmInVwV2x4its",
     ProdUrl: "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4363&deploy=1&compid=7972741&ns-at=AAEJ7tMQj7nwNmk-xPekCtRHeFZqWvqHsTMC61_Fm5CUtqC4tJM"
+  },
+  {
+    name: "Reasons To Buy",
+    SandboxUrl :"https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4399&deploy=1&compid=7972741&ns-at=AAEJ7tMQshIS5msG7CoaDtoEGWXc55kRX059TX6GCiAUJeBu248",
+    ProdUrl : "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4399&deploy=1&compid=7972741&ns-at=AAEJ7tMQshIS5msG7CoaDtoEGWXc55kRX059TX6GCiAUJeBu248"
   }
 ];
 
@@ -118,7 +123,10 @@ export const fieldMap = [
   // Dynmaic fields //
   {name: "Online?", internalid: "", fieldType: "Checkbox", disableField: true},
   {name: "Short Description", internalid:"storedescription", fieldType: "rich-text"},
-  {name: "Detailed Description", internalid:"storedetaileddescription", fieldType: "rich-text"}
-  
-
+  {name: "Detailed Description", internalid:"storedetaileddescription", fieldType: "rich-text"},
+  // New Web Description Fields // 
+  {name: "New Short Desc", internalid:"custitem_sb_wb_short_description", fieldType: "rich-text"},
+  {name: "Description Preview", internalid: "custitem_sb_web_desc", fieldType: "rich-text"}, 
+  {name: "reasons to buy", internalid: "custitem_sb_reasons_to_buy", fieldType: "multiple-select", jsonFeed: urlFor("Reasons To Buy")},
+  {name : "New Feature Desc", internalid: "custitem_sb_web_prod_description", fieldType: "rich-text"},
 ];

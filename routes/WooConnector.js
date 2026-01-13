@@ -1,355 +1,396 @@
-// routes/WooConnector.js
-import express from "express";
-import WooCommerceRestApiPkg from "@woocommerce/woocommerce-rest-api";
-import fetch from "node-fetch";
+// ===========================
+// WooCommerce Connector
+// ===========================
 
-const router = express.Router();
-const WooCommerceRestApi = WooCommerceRestApiPkg.default || WooCommerceRestApiPkg;
+const jsonUrl =
+  "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4398&deploy=27&compid=7972741&ns-at=AAEJ7tMQe8mVkMCxoDjNgaNNK7UooQa82veIFu24hZGAw7zVxRg";
 
-// ------------------------------------------------------------------
-// Woo API factory
-// ------------------------------------------------------------------
-function getWooApi(env = "Sandbox") {
-  const isProd = String(env || "").toLowerCase() === "production";
-  return new WooCommerceRestApi({
-    url: isProd ? process.env.WOOCOMMERCE_PROD_URL : process.env.WOOCOMMERCE_URL_SANDBOX,
-    consumerKey: isProd ? process.env.WOOCOMMERCE_PROD_KEY : process.env.WOOCOMMERCE_SANDBOX_KEY,
-    consumerSecret: isProd ? process.env.WOOCOMMERCE_PROD_SECRET : process.env.WOOCOMMERCE_SANDBOX_SECRET,
-    version: "wc/v3",
-  });
-}
+let fullData = [];
+let filteredData = [];
 
-// ------------------------------------------------------------------
-// Helpers
-// ------------------------------------------------------------------
+// --- Helpers ---
+const hasValue = (v) => v != null && v !== "" && v !== "null";
+const hasMissingFields = (row) => {
+  const ignore = ["Internal ID", "Name", "parent internal  id", "Is Parent", "Connector ID"];
+  return Object.keys(row)
+    .filter((k) => !ignore.includes(k))
+    .some((k) => !hasValue(row[k]));
+};
 
-// ✅ Upload image from NetSuite to WordPress Media Library
-async function uploadImageToWoo(imageUrl, position = 0) {
-  if (!imageUrl) return null;
+// --- Load & Init ---
+window.addEventListener("DOMContentLoaded", async () => {
+  const container = document.getElementById("table-data");
+  const loader = document.createElement("div");
+  loader.className = "loading-container";
+  loader.innerHTML = `<div class="spinner"></div><p>Loading data, please wait...</p>`;
+  container.appendChild(loader);
+
   try {
-    const match = imageUrl.match(/id=(\d+)/);
-    const nsId = match ? match[1] : Math.floor(Math.random() * 999999);
-    const fileName = `NS-${nsId}.jpg`;
+    const res = await fetch(jsonUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const payload = await res.json();
 
-    console.log(`📥 Fetching image from NetSuite: ${fileName}`);
+    // Accept either: [ ...rows ]  OR  { results: [ ...rows ] }
+    fullData = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.results)
+        ? payload.results
+        : [];
 
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) throw new Error(`Failed to fetch image (${imgRes.status})`);
-    const imgBuffer = Buffer.from(await imgRes.arrayBuffer());
+    if (!Array.isArray(fullData)) fullData = [];
 
-    console.log(`⬆️ Uploading image to WordPress: ${fileName}`);
+    // Only show parents initially (truthy "Is Parent")
+    filteredData = fullData.filter((r) => !!r["Is Parent"]);
 
-    const uploadRes = await fetch(`${process.env.WOOCOMMERCE_URL_SANDBOX}/wp-json/wp/v2/media`, {
-      method: "POST",
-      headers: {
-        Authorization:
-          "Basic " +
-          Buffer.from(`${process.env.WP_MEDIA_USER}:${process.env.WP_MEDIA_PASS}`).toString("base64"),
-        "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Type": "image/jpeg",
-      },
-      body: imgBuffer,
-    });
+    container.innerHTML = "";
 
-    const uploadData = await uploadRes.json();
+    // --- Render Filter Panel ---
+    renderFilterPanel(container);
 
-    if (uploadRes.ok && uploadData.id) {
-      console.log(`🖼️ Uploaded image ${fileName} → Media ID ${uploadData.id}`);
-      return { id: uploadData.id, position };
-    } else {
-      console.warn(`⚠️ Image upload failed for ${fileName}`, uploadData);
-      return null;
-    }
-  } catch (err) {
-    console.error("❌ uploadImageToWoo failed:", err.message);
-    return null;
-  }
-}
+    // --- Push Button (below filter, above table) ---
+    const actionContainer = document.createElement("div");
+    actionContainer.className = "woo-action-container";
 
-// ✅ Category helper (with safeguard)
-async function ensureCategory(api, name) {
-  if (!name) return null;
-  try {
-    const { data: list } = await api.get("products/categories", { per_page: 100 });
-    const existing = list.find((c) => c.name.toLowerCase() === name.toLowerCase());
-    if (existing) {
-      console.log(`📁 Category already exists → using ${existing.name} (${existing.id})`);
-      return existing.id;
-    }
+    const pushBtn = document.createElement("button");
+    pushBtn.textContent = "Push";
+    pushBtn.className = "woo-push-btn";
+    actionContainer.appendChild(pushBtn);
+    container.appendChild(actionContainer);
 
-    const { data: created } = await api.post("products/categories", { name });
-    console.log(`📁 Created new category: ${created.name} (${created.id})`);
-    return created?.id || null;
-  } catch (err) {
-    const code = err?.response?.data?.code;
-    if (code === "term_exists") {
-      const { data: list } = await api.get("products/categories", { per_page: 100 });
-      const existing = list.find((c) => c.name.toLowerCase() === name.toLowerCase());
-      if (existing) {
-        console.log(`📁 Category already exists → using ${existing.name} (${existing.id})`);
-        return existing.id;
-      }
-    }
-    console.error("ensureCategory error:", err?.response?.data || err.message);
-    return null;
-  }
-}
-
-async function ensureAttribute(api, name) {
-  if (!name) return null;
-  const { data: attrs } = await api.get("products/attributes", { per_page: 100 });
-  const existing = attrs.find((a) => a.name.toLowerCase() === name.toLowerCase());
-  if (existing) return existing.id;
-  const { data: created } = await api.post("products/attributes", { name });
-  return created?.id || null;
-}
-
-async function ensureAttributeTerm(api, attributeId, termName) {
-  if (!attributeId || !termName) return null;
-  const { data: terms } = await api.get(`products/attributes/${attributeId}/terms`, { per_page: 100 });
-  const existing = terms.find((t) => t.name.toLowerCase() === termName.toLowerCase());
-  if (existing) return existing.id;
-  const { data: created } = await api.post(`products/attributes/${attributeId}/terms`, { name: termName });
-  return created?.id || null;
-}
-
-async function buildGlobalMatrixMeta(api, children) {
-  const collected = {};
-  for (const c of children) {
-    for (const [key, value] of Object.entries(c)) {
-      if (key.startsWith("Matrix :") && value && String(value).trim() !== "") {
-        const name = key.replace("Matrix :", "").trim();
-        collected[name] = collected[name] || new Set();
-        collected[name].add(String(value).trim());
-      }
-    }
-  }
-  const meta = {};
-  for (const [attrName, valsSet] of Object.entries(collected)) {
-    const id = await ensureAttribute(api, attrName);
-    if (!id) continue;
-    const terms = Array.from(valsSet);
-    for (const term of terms) {
-      await ensureAttributeTerm(api, id, term);
-    }
-    meta[attrName] = { id, options: terms };
-  }
-  return meta;
-}
-
-// ------------------------------------------------------------------
-// Main route
-// ------------------------------------------------------------------
-router.post("/push", async (req, res) => {
-  try {
-    if (!req.session || !req.session.user) {
-      return res.status(401).json({ success: false, message: "Unauthorized – please log in again" });
-    }
-
-    const { rows, environment } = req.body || {};
-    if (!Array.isArray(rows) || rows.length === 0) {
-      return res.status(400).json({ success: false, message: "No rows received" });
-    }
-
-    console.log("🔄 Fetching NS data...");
-    const jsonUrl =
-      "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4070&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQ36KHWv402slQtrHVQ0QIFZOqj2KRxW39ZEthF8eqhic";
-    const nsRes = await fetch(jsonUrl);
-    if (!nsRes.ok) throw new Error(`NetSuite fetch failed: ${nsRes.status}`);
-    const allData = await nsRes.json();
-
-    const selectedIds = rows.map((r) => String(r["Internal ID"]));
-    const parents = allData.filter((r) => {
-      const isSelected = selectedIds.includes(String(r["Internal ID"]));
-      const parentId = String(r["parent internal  id"] || "");
-      const isChildOfSelected = allData.some(
-        (p) => selectedIds.includes(String(p["Internal ID"])) && String(p["Internal ID"]) === parentId
-      );
-      return isSelected && !isChildOfSelected;
-    });
-    const children = allData.filter((r) =>
-      parents.some((p) => String(r["parent internal  id"]) === String(p["Internal ID"]))
-    );
-
-    if (parents.length === 0) {
-      return res.json({ success: true, results: [], message: "No matching parent rows in JSON" });
-    }
-
-    const api = getWooApi(environment || "Sandbox");
-    const results = [];
-    const payloads = []; // ✅ Store all Woo payloads
-
-    for (const parent of parents) {
-      const internalId = parent["Internal ID"];
-      const connectorId = parent["Connector ID"] || "";
-      const myChildren = children.filter((c) => String(c["parent internal  id"]) === String(internalId));
-      const hasChildren = myChildren.length > 0;
-
-      if (connectorId.trim() !== "") {
-        results.push({ id: internalId, action: "skipped (existing connector id)" });
-        continue;
+    // ✅ now safely add the click logic *after* pushBtn exists
+    pushBtn.addEventListener("click", async () => {
+      const checkedRows = document.querySelectorAll(".row-select:checked");
+      if (checkedRows.length === 0) {
+        alert("Please select at least one item to push.");
+        return;
       }
 
-      // ✅ Categories
-      const catNames = (parent["Category"] || "")
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const categoryIds = [];
-      for (const name of catNames) {
-        const id = await ensureCategory(api, name);
-        if (id) categoryIds.push({ id });
+      // Collect data from selected parent + child rows
+      const rowsToPush = [];
+
+      checkedRows.forEach((cb) => {
+        const row = cb.closest("tr");
+        if (!row) return;
+
+        // find nearest table header row
+        const table = row.closest("table");
+        const headers = [...table.querySelectorAll("th")].map((th) =>
+          th.textContent.trim()
+        );
+
+        const cells = [...row.querySelectorAll("td")];
+        const rowData = {};
+
+        // Map header -> cell text
+        headers.forEach((header, i) => {
+          const cell = cells[i];
+          if (!cell) return;
+          const val = cell.textContent.trim();
+          if (header) rowData[header] = val;
+        });
+
+        // parent/child detection
+        const parentId = row.dataset.parentId;
+        if (parentId) rowData["parent internal  id"] = parentId;
+
+        rowsToPush.push(rowData);
+      });
+
+      if (rowsToPush.length === 0) {
+        alert("No valid rows found.");
+        return;
       }
 
-      // ✅ Build Product data
-      const productData = {
-        sku: `P-${String(internalId)}`,
-        name: parent["Name"] || "Untitled",
-        type: hasChildren ? "variable" : "simple",
-        short_description: parent["Short Description"] || "",
-        description: parent["Detailed Description"] || "",
-        categories: categoryIds,
-        manage_stock: !hasChildren,
-        backorders: "no",
-        status: "publish",
-      };
+      console.log("🟢 Pushing rows:", rowsToPush);
 
-      // ✅ Upload parent + gallery images
-      const images = [];
-      if (parent["Item Image"]) {
-        const mainImg = await uploadImageToWoo(parent["Item Image"], 0);
-        if (mainImg) images.push(mainImg);
-      }
+      // Show temporary loader
+      pushBtn.disabled = true;
+      pushBtn.textContent = "Pushing...";
 
-      const galleryFields = [
-        "Catalogue Image Two",
-        "Catalogue Image Three",
-        "Catalogue Image Four",
-        "Catalogue Image Five",
-      ];
-      for (let i = 0; i < galleryFields.length; i++) {
-        const field = galleryFields[i];
-        if (parent[field]) {
-          const img = await uploadImageToWoo(parent[field], i + 1);
-          if (img) images.push(img);
-        }
-      }
-      if (images.length > 0) productData.images = images;
-
-      // ✅ Tags
-      if (parent["tags"]) {
-        const tags = String(parent["tags"])
-          .split(".")
-          .map((t) => t.trim())
-          .filter(Boolean);
-        if (tags.length) productData.tags = tags.map((t) => ({ name: t }));
-      }
-
-      const parentAttributes = [];
-
-      // ✅ Comfort attribute
-      if (parent["Comfort"]) {
-        const comfortId = await ensureAttribute(api, "Comfort");
-        if (comfortId) {
-          await ensureAttributeTerm(api, comfortId, String(parent["Comfort"]).trim());
-          parentAttributes.push({
-            id: comfortId,
-            visible: true,
-            variation: false,
-            options: [String(parent["Comfort"]).trim()],
-          });
-        }
-      }
-
-      // ✅ Matrix attributes
-      let matrixMeta = {};
-      if (hasChildren) {
-        matrixMeta = await buildGlobalMatrixMeta(api, myChildren);
-        for (const [attrName, meta] of Object.entries(matrixMeta)) {
-          parentAttributes.push({
-            id: meta.id,
-            visible: true,
-            variation: true,
-            options: meta.options,
-          });
-        }
-      }
-      if (parentAttributes.length) productData.attributes = parentAttributes;
-
-      // ✅ Create parent
-      let createdParent;
       try {
-        const { data } = await api.post("products", productData);
-        createdParent = data;
-        payloads.push({ parent: data });
-        console.log(`✅ Created parent ${createdParent.id}: ${createdParent.name}`);
-      } catch (err) {
-        console.error("❌ [Woo] Create parent failed:", err?.response?.data || err.message, productData);
-        results.push({ id: internalId, action: "error", stage: "create_parent", error: err?.response?.data || err.message });
-        continue;
-      }
+        const res = await fetch("/api/woo/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rows: rowsToPush,
+            environment: "Sandbox", // change to Production as needed
+          }),
+        });
 
-      // ✅ Create variations with child Item Images
-      if (hasChildren && createdParent.type === "variable") {
-        for (const child of myChildren) {
-          const variationAttrs = [];
-          for (const [attrName, meta] of Object.entries(matrixMeta)) {
-            const childKey = Object.keys(child).find(
-              (k) => k.startsWith("Matrix :") && k.replace("Matrix :", "").trim() === attrName
-            );
-            const childVal = childKey ? String(child[childKey]).trim() : "";
-            if (childVal) variationAttrs.push({ id: meta.id, option: childVal });
-          }
+        const data = await res.json();
 
-          if (variationAttrs.length === 0) continue;
-
-          let variationImage = null;
-          if (child["Item Image"]) {
-            variationImage = await uploadImageToWoo(child["Item Image"], 0);
-          }
-
-          const variationData = {
-            sku: `V-${String(child["Internal ID"])}`,
-            regular_price: String(child["Base Price"] || 0),
-            manage_stock: true,
-            backorders: "yes",
-            attributes: variationAttrs,
-            image: variationImage ? { id: variationImage.id } : undefined,
-          };
-
-          try {
-            const { data: v } = await api.post(`products/${createdParent.id}/variations`, variationData);
-            payloads.push({ variation: v });
-            console.log(`   ➕ Created variation ${v.id} for ${createdParent.id} (${variationAttrs.map(a => `${a.id}:${a.option}`).join(", ")})`);
-          } catch (err) {
-            console.error("❌ [Woo] Create variation failed:", err?.response?.data || err.message, variationData);
-            results.push({
-              id: child["Internal ID"],
-              parent: createdParent.id,
-              action: "error",
-              stage: "create_variation",
-              error: err?.response?.data || err.message,
-            });
-          }
+        if (!data.success) {
+          alert(`❌ Push failed: ${data.error || data.message}`);
+        } else {
+          console.log("✅ WooCommerce Push Results:", data);
+          alert(`✅ Push completed (${data.results.length} items processed)`);
         }
+      } catch (err) {
+        console.error("❌ Push error:", err);
+        alert("An error occurred while pushing products.");
+      } finally {
+        pushBtn.disabled = false;
+        pushBtn.textContent = "Push";
       }
-
-      results.push({ id: internalId, action: "created", wooId: createdParent.id, type: createdParent.type });
-    }
-
-    console.log("✅ Woo push completed");
-
-    // ✅ Return Woo payload
-    return res.json({
-      success: true,
-      message: "WooCommerce push completed successfully",
-      results,
-      payload: payloads,
     });
+
+    // --- Limit to 25 rows on initial load ---
+    const initialSubset = filteredData.slice(0, 25);
+    buildTable(initialSubset, container);
   } catch (err) {
-    console.error("❌ Woo push error:", err);
-    return res.status(500).json({ success: false, error: err.message });
+    container.innerHTML = `<p style="color:red;">❌ Failed to load: ${err.message}</p>`;
   }
 });
 
-export default router;
+// --- Filter Logic ---
+function filterData(filters) {
+  if (!filters.length) return fullData.filter((r) => r["Is Parent"]);
+  return fullData.filter((item) => {
+    if (!item["Is Parent"]) return false;
+    return filters.every(({ field, value }) =>
+      (item[field] || "").toString().toLowerCase().includes(value.toLowerCase())
+    );
+  });
+}
+
+function renderFilterPanel(container) {
+  const panelContainer = document.createElement("div");
+  panelContainer.className = "filter-panel-container";
+
+  const header = document.createElement("div");
+  header.className = "filter-panel-header";
+  header.innerHTML = `Filters <span>&#9660;</span>`;
+  panelContainer.appendChild(header);
+
+  const body = document.createElement("div");
+  body.className = "filter-panel";
+  body.id = "filter-panel";
+
+  const table = document.createElement("table");
+  table.id = "filter-table";
+  table.innerHTML = `
+    <thead><tr><th>Field</th><th>Value</th><th></th></tr></thead>
+    <tbody id="filter-tbody"></tbody>
+  `;
+  body.appendChild(table);
+
+  const addBtn = document.createElement("button");
+  addBtn.textContent = "Add Filter";
+  addBtn.className = "add-filter-btn";
+  addBtn.onclick = () => addFilterRow();
+
+  const applyBtn = document.createElement("button");
+  applyBtn.textContent = "Apply";
+  applyBtn.className = "apply-filter-btn";
+  applyBtn.onclick = () => {
+    const filters = [];
+    document.querySelectorAll("#filter-tbody tr").forEach((tr) => {
+      const field = tr.querySelector(".filter-field")?.value;
+      const value = tr.querySelector(".filter-value")?.value;
+      if (field && value) filters.push({ field, value });
+    });
+    const results = filterData(filters);
+    document.querySelector("#main-table")?.remove();
+    buildTable(results, container);
+  };
+
+  body.append(addBtn, applyBtn);
+  panelContainer.appendChild(body);
+  container.appendChild(panelContainer);
+
+  header.addEventListener("click", () => {
+    body.classList.toggle("collapsed");
+    header.classList.toggle("collapsed");
+  });
+
+  addFilterRow();
+}
+
+function addFilterRow() {
+  const tbody = document.getElementById("filter-tbody");
+  const row = document.createElement("tr");
+
+  const fieldTd = document.createElement("td");
+  const valueTd = document.createElement("td");
+  const removeTd = document.createElement("td");
+
+  const select = document.createElement("select");
+  select.className = "filter-field theme-select";
+  const fields = ["Name", "Display Name", "Preferred Supplier", "Class", "Category", "Colour Filter"];
+  select.innerHTML =
+    `<option value="">-- choose field --</option>` +
+    fields.map((f) => `<option value="${f}">${f}</option>`).join("");
+  fieldTd.appendChild(select);
+
+  const input = document.createElement("input");
+  input.className = "filter-value";
+  input.type = "text";
+  valueTd.appendChild(input);
+
+  const remove = document.createElement("button");
+  remove.textContent = "×";
+  remove.className = "remove-filter-btn";
+  remove.onclick = () => row.remove();
+  removeTd.appendChild(remove);
+
+  row.append(fieldTd, valueTd, removeTd);
+  tbody.appendChild(row);
+}
+
+// --- Build Table ---
+function buildTable(parents, container) {
+  const table = document.createElement("table");
+  table.className = "csv-table";
+  table.id = "main-table";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = `
+    <tr>
+      <th><input type="checkbox" class="select-all"></th>
+      <th>Internal ID</th>
+      <th>Name</th>
+      <th>Display Name</th>
+      <th>Preferred Supplier</th>
+      <th>Connector ID</th>
+      <th>Has Values</th>
+    </tr>`;
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+
+  // --- Loop through each parent row ---
+  parents.forEach((parent) => {
+    const tr = document.createElement("tr");
+    tr.className = "parent-row";
+    tr.dataset.parentId = parent["Internal ID"];
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="row-select parent-checkbox"></td>
+      <td>${parent["Internal ID"]}</td>
+      <td>${parent["Name"] || ""}</td>
+      <td>${parent["Display Name"] || ""}</td>
+      <td>${parent["Preferred Supplier"] || ""}</td>
+      <td>${parent["Connector ID"] || ""}</td>
+      <td class="has-value">${hasMissingFields(parent) ? "❌" : "✔️"}</td>
+    `;
+
+    const children = fullData.filter(
+      (c) => c["parent internal  id"] === parent["Internal ID"]
+    );
+
+    if (children.length > 0) {
+      const childRow = document.createElement("tr");
+      childRow.className = "child-row";
+      const childTd = document.createElement("td");
+      childTd.colSpan = 7;
+
+      const childTable = document.createElement("table");
+      childTable.className = "child-table";
+
+      // --- Collect matrix fields dynamically (only those with values) ---
+      const matrixFields = new Set();
+      children.forEach((c) => {
+        Object.keys(c).forEach((key) => {
+          if (
+            key.startsWith("Matrix :") &&
+            c[key] &&
+            String(c[key]).trim() !== ""
+          ) {
+            matrixFields.add(key);
+          }
+        });
+      });
+      const matrixColumns = Array.from(matrixFields);
+
+      // --- Build child header dynamically ---
+      const head = document.createElement("tr");
+      head.innerHTML = `
+        <th><input type="checkbox" class="select-all-child"></th>
+        <th>Internal ID</th>
+        <th>Name</th>
+        <th>Enabled for WooCommerce</th>
+        <th>Connector ID</th>
+        ${matrixColumns
+          .map((col) => `<th>${col.replace("Matrix :", "").trim()}</th>`)
+          .join("")}
+        <th>Has Values</th>
+      `;
+      childTable.appendChild(head);
+
+      // --- Build child rows ---
+      children.forEach((c) => {
+        const cr = document.createElement("tr");
+        cr.classList.add("child-item");
+        cr.dataset.parentId = parent["Internal ID"];
+
+        let matrixCells = matrixColumns
+          .map((col) => `<td>${c[col] || ""}</td>`)
+          .join("");
+
+        cr.innerHTML = `
+          <td><input type="checkbox" class="row-select child-checkbox"></td>
+          <td>${c["Internal ID"]}</td>
+          <td>${c["Name"] || ""}</td>
+          <td>${c["Enabled for WooCommerce"] || ""}</td>
+          <td>${c["Connector ID"] || ""}</td>
+          ${matrixCells}
+          <td class="has-value">${hasMissingFields(c) ? "❌" : "✔️"}</td>
+        `;
+        childTable.appendChild(cr);
+      });
+
+      childTd.appendChild(childTable);
+      childRow.appendChild(childTd);
+      childRow.style.display = "none";
+      tbody.append(tr, childRow);
+
+      // --- Toggle expand/collapse ---
+      tr.addEventListener("click", (e) => {
+        if (e.target.type === "checkbox") return;
+        const open = childRow.style.display === "table-row";
+        childRow.style.display = open ? "none" : "table-row";
+        tr.classList.toggle("expanded", !open);
+      });
+    } else {
+      tbody.appendChild(tr);
+    }
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+
+  // =====================================================
+  // 🧩 Checkbox hierarchy logic
+  // =====================================================
+
+  const masterCheckbox = table.querySelector(".select-all");
+
+  // --- Master checkbox toggles all ---
+  masterCheckbox.addEventListener("change", (e) => {
+    const checked = e.target.checked;
+    table.querySelectorAll(".row-select").forEach((cb) => {
+      cb.checked = checked;
+    });
+  });
+
+  // --- Parent checkbox toggles all its children ---
+  table.querySelectorAll(".parent-checkbox").forEach((parentCb) => {
+    parentCb.addEventListener("change", (e) => {
+      const parentId = e.target.closest("tr").dataset.parentId;
+      const checked = e.target.checked;
+
+      const childCheckboxes = table.querySelectorAll(
+        `.child-checkbox[data-parent-id="${parentId}"]`
+      );
+      childCheckboxes.forEach((cb) => (cb.checked = checked));
+    });
+  });
+
+  // --- Assign parentId to each child checkbox for lookup ---
+  table.querySelectorAll(".child-checkbox").forEach((cb) => {
+    const row = cb.closest("tr");
+    if (row && row.dataset.parentId) {
+      cb.dataset.parentId = row.dataset.parentId;
+    }
+  });
+}

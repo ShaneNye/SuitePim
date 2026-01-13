@@ -3,7 +3,7 @@
 // ===========================
 
 const jsonUrl =
-  "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4070&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQ36KHWv402slQtrHVQ0QIFZOqj2KRxW39ZEthF8eqhic";
+  "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4398&deploy=27&compid=7972741&ns-at=AAEJ7tMQe8mVkMCxoDjNgaNNK7UooQa82veIFu24hZGAw7zVxRg";
 
 let fullData = [];
 let filteredData = [];
@@ -28,9 +28,20 @@ window.addEventListener("DOMContentLoaded", async () => {
   try {
     const res = await fetch(jsonUrl);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    fullData = await res.json();
+    const payload = await res.json();
 
-    filteredData = fullData.filter((r) => r["Is Parent"]);
+    // Accept either: [ ...rows ]  OR  { results: [ ...rows ] }
+    fullData = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.results)
+        ? payload.results
+        : [];
+
+    if (!Array.isArray(fullData)) fullData = [];
+
+    // Only show parents initially (truthy "Is Parent")
+    filteredData = fullData.filter((r) => !!r["Is Parent"]);
+
     container.innerHTML = "";
 
     // --- Render Filter Panel ---
