@@ -1,7 +1,7 @@
 // ===========================
 // WooCommerce Connector
 // ===========================
-
+console.log("connector js wired correctly")
 const jsonUrl =
   "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4398&deploy=27&compid=7972741&ns-at=AAEJ7tMQe8mVkMCxoDjNgaNNK7UooQa82veIFu24hZGAw7zVxRg";
 

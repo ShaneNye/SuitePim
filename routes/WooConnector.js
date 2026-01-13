@@ -153,7 +153,7 @@ router.post("/push", async (req, res) => {
 
     console.log("🔄 Fetching NS data...");
     const jsonUrl =
-      "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4070&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQ36KHWv402slQtrHVQ0QIFZOqj2KRxW39ZEthF8eqhic";
+      "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4398&deploy=27&compid=7972741&ns-at=AAEJ7tMQe8mVkMCxoDjNgaNNK7UooQa82veIFu24hZGAw7zVxRg";
     const nsRes = await fetch(jsonUrl);
     if (!nsRes.ok) throw new Error(`NetSuite fetch failed: ${nsRes.status}`);
     const allData = await nsRes.json();
