@@ -1,5 +1,7 @@
 // ProductData.js
 import { fieldMap } from "./fieldMap.js";
+import { webTablePresets } from "./webTablePresets.js";
+
 
 const SANDBOXjsonUrl =
   "https://7972741-sb1.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4070&deploy=1&compid=7972741_SB1&ns-at=AAEJ7tMQ36KHWv402slQtrHVQ0QIFZOqj2KRxW39ZEthF8eqhic";
@@ -138,6 +140,8 @@ async function loadJSONData() {
     renderFieldsPanel(columns, panelsParent);
     renderBulkActionPanel(columns, panelsParent);
     renderPushButton(panelsParent);
+    initWebTablePresetsUI(panelsParent);
+
 
     // --- 5) Build table
     await displayJSONTable(filteredData);
@@ -2742,6 +2746,184 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+function initWebTablePresetsUI(parentEl) {
+  // --------- small DOM helpers ----------
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const findButtonByText = (root, txt) =>
+    Array.from(root.querySelectorAll("button")).find(
+      (b) => (b.textContent || "").trim() === txt
+    );
+
+  const getFilterPanel = () => document.getElementById("filter-panel");
+  const getFieldsPanel = () => document.getElementById("fields-panel");
+
+  async function clearFiltersByUI() {
+    const tbody = document.getElementById("filter-tbody");
+    if (!tbody) return;
+
+    // Click every remove button that exists.
+    // Your filter panel auto-adds a blank row if none remain. :contentReference[oaicite:3]{index=3}
+    let safety = 50;
+    while (safety-- > 0) {
+      const removeBtns = Array.from(
+        tbody.querySelectorAll("button.filter-remove-btn")
+      );
+      if (removeBtns.length === 0) break;
+
+      // remove all rows
+      removeBtns.forEach((btn) => btn.click());
+
+      // allow DOM to settle + auto-row to re-add if it triggers
+      await sleep(0);
+
+      // if we now have no <tr>, the panel will re-add one inside the remove handler
+      // give it one more tick
+      if (tbody.querySelectorAll("tr").length === 0) await sleep(0);
+
+      // if there is exactly 1 empty row and no remove button (unlikely), we’re done
+      if (tbody.querySelectorAll("tr").length <= 1) break;
+    }
+  }
+
+  async function addOrReuseFilterRow(index) {
+    const filterPanel = getFilterPanel();
+    const tbody = document.getElementById("filter-tbody");
+    if (!filterPanel || !tbody) return null;
+
+    // Reuse existing row if it exists
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    if (rows[index]) return rows[index];
+
+    // Otherwise click "Add Filter" until we have enough rows
+    const addBtn = findButtonByText(filterPanel, "Add Filter");
+    if (!addBtn) return null;
+
+    while (tbody.querySelectorAll("tr").length <= index) {
+      addBtn.click();
+      await sleep(0);
+    }
+    return Array.from(tbody.querySelectorAll("tr"))[index] || null;
+  }
+
+  async function setFilterRowLikeUser(rowEl, { field, value }) {
+    if (!rowEl) return;
+
+    const fieldSelect = rowEl.querySelector("select.filter-field-select");
+    if (!fieldSelect) return;
+
+    // set field (this triggers your existing renderValueControl via change listener) :contentReference[oaicite:4]{index=4}
+    fieldSelect.value = field;
+    fieldSelect.dispatchEvent(new Event("change", { bubbles: true }));
+
+    // wait for renderValueControl() async work to complete
+    await sleep(0);
+    await sleep(0);
+
+    // Now whichever control exists, set it
+    const valueSelect = rowEl.querySelector("select.filter-value-select");
+    const valueInput = rowEl.querySelector("input.filter-value-input");
+
+    if (valueSelect) {
+      valueSelect.value = value;
+      valueSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    } else if (valueInput) {
+      valueInput.value = value;
+      valueInput.dispatchEvent(new Event("input", { bubbles: true }));
+      valueInput.dispatchEvent(new Event("change", { bubbles: true }));
+    } else {
+      // multiple-select filter UI is a modal button in your code;
+      // presets can still work if you keep them to Checkbox/ListRecord/Text for now.
+      console.warn("Preset filter field did not create a value control:", field);
+    }
+  }
+
+  function applyFieldsLikeUser(fields) {
+    const panel = getFieldsPanel();
+    if (!panel) return;
+
+    const wanted = new Set(fields || []);
+    const checkboxes = Array.from(
+      panel.querySelectorAll("input[type='checkbox'][data-column]")
+    );
+
+    // Set checked states (no per-checkbox re-render spam)
+    checkboxes.forEach((cb) => {
+      cb.checked = wanted.has(cb.dataset.column);
+    });
+
+    // Use your existing plumbing once 
+    updateDisplayedColumns();
+    displayJSONTable(filteredData); // show updated columns
+  }
+
+  async function applyFiltersLikeUser(filters) {
+    const filterPanel = getFilterPanel();
+    const tbody = document.getElementById("filter-tbody");
+    if (!filterPanel || !tbody) return;
+
+    await clearFiltersByUI();
+
+    // Ensure we have at least one row to start with
+    if (tbody.querySelectorAll("tr").length === 0) {
+      const addBtn = findButtonByText(filterPanel, "Add Filter");
+      if (addBtn) addBtn.click();
+      await sleep(0);
+    }
+
+    // Fill rows
+    const list = Array.isArray(filters) ? filters : [];
+    for (let i = 0; i < list.length; i++) {
+      const tr = await addOrReuseFilterRow(i);
+      await setFilterRowLikeUser(tr, list[i]);
+    }
+
+    // Click Apply button (calls applyFilters() inside your handler) 
+    const applyBtn = findButtonByText(filterPanel, "Apply");
+    if (applyBtn) applyBtn.click();
+    else applyFilters(); // fallback
+  }
+
+  async function applyPresetByName(name) {
+    const preset = (webTablePresets || []).find((p) => p.name === name);
+    if (!preset) return;
+
+    applyFieldsLikeUser(preset.fields);
+    await applyFiltersLikeUser(preset.filters);
+  }
+
+  // --------- UI ----------
+  const wrap = document.createElement("div");
+  wrap.style.display = "flex";
+  wrap.style.alignItems = "center";
+  wrap.style.gap = "10px";
+  wrap.style.margin = "10px 0";
+
+  const label = document.createElement("strong");
+  label.textContent = "Presets:";
+
+  const select = document.createElement("select");
+  select.classList.add("theme-select");
+  select.innerHTML = `
+    <option value="">-- choose preset --</option>
+    ${(webTablePresets || [])
+      .map((p) => `<option value="${p.name}">${p.name}</option>`)
+      .join("")}
+  `;
+
+  select.addEventListener("change", async () => {
+    if (!select.value) return;
+    await applyPresetByName(select.value);
+  });
+
+  wrap.appendChild(label);
+  wrap.appendChild(select);
+
+  // put it ABOVE whatever you pass in
+parentEl.appendChild(wrap);
+}
+
 
 
 
