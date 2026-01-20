@@ -1433,7 +1433,7 @@
       ]
     },
     {
-      "label": "Jet & Ebony",
+      "label": "Jet, Ebony, Pearl, Ivory",
       "color": "rgba(5, 5, 5, 0.2)",
       "rows": [
         {
@@ -1459,6 +1459,32 @@
             {
               "field": "Name",
               "value": "Jet Memory"
+            }
+          ]
+        },
+        {
+          "label": "Ivory ",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Ivory Mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Pearl",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Pearl Mattress :"
             }
           ]
         }
@@ -1607,5 +1633,5 @@
       ]
     }
   ],
-  "savedAt": "2026-01-12T10:45:35.211Z"
+  "savedAt": "2026-01-20T14:36:23.230Z"
 }
