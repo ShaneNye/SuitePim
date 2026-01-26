@@ -1182,7 +1182,7 @@
       "rows": [
         {
           "label": "Emerald Mattress",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1199,7 +1199,7 @@
         },
         {
           "label": "Rosaline Mattress",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1212,7 +1212,7 @@
         },
         {
           "label": "Zircon Mattress",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1229,7 +1229,7 @@
         },
         {
           "label": "Ruby Mattress",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1242,7 +1242,7 @@
         },
         {
           "label": "Amatrix Mattress",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1255,7 +1255,7 @@
         },
         {
           "label": "Citrine Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1268,7 +1268,7 @@
         },
         {
           "label": "Ironstone Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1281,7 +1281,7 @@
         },
         {
           "label": "Amethyst Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1349,7 +1349,7 @@
         },
         {
           "label": "Morion",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1633,5 +1633,5 @@
       ]
     }
   ],
-  "savedAt": "2026-01-20T14:36:23.230Z"
+  "savedAt": "2026-01-26T14:02:32.559Z"
 }
