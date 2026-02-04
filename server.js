@@ -1174,6 +1174,17 @@ app.get("/api/item/:id/history", authMiddleware, async (req, res) => {
   }
 });
 
+function shouldRetryAsServiceItem(res, bodyTextOrJson) {
+  // NetSuite often returns 500 UNEXPECTED_ERROR when record type doesn't match.
+  if (!res) return false;
+  if (res.status === 404) return true; // wrong endpoint
+  if (res.status !== 500) return false;
+
+  const t = typeof bodyTextOrJson === "string" ? bodyTextOrJson : JSON.stringify(bodyTextOrJson || {});
+  return t.includes("UNEXPECTED_ERROR");
+}
+
+
 
 /* -----------------------------
    Job Queue System
@@ -1231,7 +1242,10 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       catch { rowResult.response = text || { status: "No Content (204)" }; }
 
       console.log("⬅️ [Validation] Response:", rowResult.response);
-      rowResult.status = "Success";
+
+      // ✅ treat non-2xx as error
+      rowResult.status = response.ok ? "Success" : "Error";
+      if (!response.ok) rowResult.response = { error: "Validation PATCH failed", status: response.status, body: rowResult.response };
       return rowResult;
     }
 
@@ -1280,6 +1294,13 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
               let priceData; try { priceData = JSON.parse(priceText); } catch { priceData = priceText; }
 
               console.log("⬅️ [NetSuite] Response:", priceData);
+
+              if (!priceRes.ok) {
+                rowResult.status = "Error";
+                rowResult.response.netsuite = { error: "Price PATCH failed", status: priceRes.status, body: priceData };
+                return rowResult;
+              }
+
               rowResult.response.netsuite = priceData;
               rowResult.status = "Success";
             } else {
@@ -1335,113 +1356,185 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
     const payload = {};
     let basePriceVal;
 
+    // ✅ Build payload safely (prevents payload.undefined)
     for (const field of fieldMap) {
+      if (field?.disableField) continue;
+      const nsFieldId = (field?.internalid ?? "").toString().trim();
+      if (!nsFieldId) continue;
+
       if (field.name === "Base Price") {
         const val = parseFloat(row[field.name]);
-        if (!isNaN(val)) basePriceVal = val;
+        if (!Number.isNaN(val)) basePriceVal = val;
         continue;
       }
+
       if (field.fieldType === "multiple-select") {
         const ids = row[`${field.name}_InternalId`];
-        if (Array.isArray(ids)) payload[field.internalid] = { items: ids.map((id) => ({ id: String(id) })) };
-        continue;
-      }
-      if (field.name === "Preferred Supplier") {
-        const newVendorId = row[`${field.name}_InternalId`] ?? null;
-        if (newVendorId) {
-          try {
-            const vendorUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/itemVendor`;
-            const { tokenId, tokenSecret } = user;
-
-            const vendorRes = await fetch(vendorUrl, {
-              method: "GET",
-              headers: { ...getAuthHeader(vendorUrl, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
-            });
-
-            const vendorText = await vendorRes.text();
-            let vendorData; try { vendorData = JSON.parse(vendorText); } catch { vendorData = vendorText; }
-
-            if (Array.isArray(vendorData?.items) && vendorData.items.length > 0) {
-              const lastLine = vendorData.items[vendorData.items.length - 1];
-              const selfLink = lastLine.links?.find(l => l.rel === "self")?.href;
-              if (selfLink) {
-                const patchBody = { vendor: { id: String(newVendorId) }, subsidiary: { id: "6" }, preferred: true, currency: { id: "1" } };
-                console.log(`➡️ [NetSuite] PATCH Preferred Supplier ${selfLink}`);
-                console.log("   Payload:", JSON.stringify(patchBody));
-
-                const patchRes = await fetch(selfLink, {
-                  method: "PATCH",
-                  headers: { ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
-                  body: JSON.stringify(patchBody),
-                });
-
-                const patchText = await patchRes.text();
-                let patchData; try { patchData = JSON.parse(patchText); } catch { patchData = patchText; }
-                console.log("⬅️ [NetSuite] Response:", patchData);
-              }
-            }
-          } catch (err) {
-            console.error("❌ Preferred Supplier update failed:", err);
-          }
+        if (Array.isArray(ids) && ids.length > 0) {
+          payload[nsFieldId] = { items: ids.map((id) => ({ id: String(id) })) };
         }
         continue;
       }
-      if (field.fieldType === "List/Record") {
-        const internalId = row[`${field.name}_InternalId`] ?? null;
-        if (internalId !== null && internalId !== "") payload[field.internalid] = { id: String(internalId) };
+
+      if (field.name === "Preferred Supplier") {
+        // ⚠️ handled later (inventory only) so don't add to payload
         continue;
       }
+
+      if (field.fieldType === "List/Record") {
+        const internalId = row[`${field.name}_InternalId`] ?? null;
+        if (internalId !== null && internalId !== "") payload[nsFieldId] = { id: String(internalId) };
+        continue;
+      }
+
       if (field.fieldType === "image") {
         const fileId = row[`${field.name}_InternalId`];
         if (fileId && String(fileId).trim() !== "") {
           const suiteletUrl = getImageEndpoint(environment);
-          const url = `${suiteletUrl}&itemid=${row["Internal ID"]}&fileid=${fileId}&fieldid=${field.internalid}`;
+          const imgUrl = `${suiteletUrl}&itemid=${row["Internal ID"]}&fileid=${fileId}&fieldid=${nsFieldId}`;
           try {
-            const res = await fetch(url, { method: "GET" });
+            const res = await fetch(imgUrl, { method: "GET" });
             const text = await res.text();
             let data; try { data = JSON.parse(text); } catch { data = text; }
-            rowResult.response.images.push({ field: field.internalid, result: data });
+            rowResult.response.images.push({ field: nsFieldId, result: data });
           } catch (err) {
-            rowResult.response.images.push({ field: field.internalid, error: String(err) });
+            rowResult.response.images.push({ field: nsFieldId, error: String(err) });
           }
         }
         continue;
       }
+
       const value = row[field.name];
-      if (value !== undefined && value !== null && !(typeof value === "string" && value.trim() === "")) {
-        if (field.fieldType === "Currency") {
-          payload[field.internalid] = parseFloat(value) || 0;
-        } else if (field.fieldType === "Checkbox") {
-          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
-          payload[field.internalid] = v === true || v === 1 || ["true", "t", "1", "y", "yes"].includes(v);
-        } else {
-          payload[field.internalid] = String(value);
-        }
+      const hasValue =
+        value !== undefined &&
+        value !== null &&
+        !(typeof value === "string" && value.trim() === "");
+
+      if (!hasValue) continue;
+
+      if (field.fieldType === "Currency") {
+        payload[nsFieldId] = parseFloat(value) || 0;
+      } else if (field.fieldType === "Checkbox") {
+        const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
+        payload[nsFieldId] = v === true || v === 1 || ["true", "t", "1", "y", "yes"].includes(v);
+      } else {
+        payload[nsFieldId] = String(value);
       }
     }
 
-    const url = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}`;
     const { tokenId, tokenSecret } = user;
 
-    if (Object.keys(payload).length > 0) {
+    // ✅ Retry logic: inventoryItem -> serviceItem (when inventory endpoint fails)
+    const shouldRetryAsServiceItem = (res, bodyJson) => {
+      if (!res) return false;
+      if (res.status === 404) return true;
+      if (res.status !== 500) return false;
+      const s = JSON.stringify(bodyJson || {});
+      return s.includes("UNEXPECTED_ERROR");
+    };
+
+    const patchItem = async (recordType) => {
+      const url = `${envConfig.restUrl}/${recordType}/${row["Internal ID"]}`;
+
       console.log(`➡️ [NetSuite] PATCH ${url}`);
       console.log("   Payload:", JSON.stringify(payload));
 
-      const response = await fetch(url, {
+      const res = await fetch(url, {
         method: "PATCH",
-        headers: { ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
+        headers: {
+          ...getAuthHeader(url, "PATCH", tokenId, tokenSecret, envConfig),
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
         body: JSON.stringify(payload),
       });
 
-      const text = await response.text();
-      try { rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" }; }
-      catch { rowResult.response.main = text || { status: "No Content (204)" }; }
+      const text = await res.text();
+      let json;
+      try { json = text ? JSON.parse(text) : { status: "No Content (204)" }; }
+      catch { json = text || { status: "No Content (204)" }; }
 
-      console.log("⬅️ [NetSuite] Response:", rowResult.response.main);
+      return { res, url, json };
+    };
+
+    let finalRecordType = "inventoryItem";
+
+    if (Object.keys(payload).length > 0) {
+      const attempt = await patchItem("inventoryItem");
+
+      if (!attempt.res.ok && shouldRetryAsServiceItem(attempt.res, attempt.json)) {
+        console.warn(`⚠️ inventoryItem PATCH failed (${attempt.res.status}). Retrying as serviceItem...`);
+        const retry = await patchItem("serviceItem");
+
+        rowResult.response.main = {
+          attempted: ["inventoryItem", "serviceItem"],
+          inventoryItem: { status: attempt.res.status, url: attempt.url, body: attempt.json },
+          serviceItem: { status: retry.res.status, url: retry.url, body: retry.json },
+        };
+
+        if (!retry.res.ok) {
+          rowResult.status = "Error";
+          rowResult.response.error = `PATCH failed for inventoryItem and serviceItem. Statuses: ${attempt.res.status}, ${retry.res.status}`;
+          return rowResult;
+        }
+
+        finalRecordType = "serviceItem";
+        console.log("⬅️ [NetSuite] Response (serviceItem):", retry.json);
+      } else {
+        rowResult.response.main = attempt.json;
+
+        if (!attempt.res.ok) {
+          rowResult.status = "Error";
+          rowResult.response.error = `PATCH failed. Status: ${attempt.res.status}`;
+          return rowResult;
+        }
+
+        console.log("⬅️ [NetSuite] Response:", rowResult.response.main);
+      }
     }
 
-    // base price update
-    if (basePriceVal !== undefined) {
+    // ✅ Preferred Supplier update (inventory only)
+    const preferredSupplierField = fieldMap.find(f => f?.name === "Preferred Supplier");
+    const newVendorId = row[`Preferred Supplier_InternalId`] ?? null;
+
+    if (newVendorId && finalRecordType === "inventoryItem") {
+      try {
+        const vendorUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/itemVendor`;
+
+        const vendorRes = await fetch(vendorUrl, {
+          method: "GET",
+          headers: { ...getAuthHeader(vendorUrl, "GET", tokenId, tokenSecret, envConfig), "Content-Type": "application/json" },
+        });
+
+        const vendorText = await vendorRes.text();
+        let vendorData; try { vendorData = JSON.parse(vendorText); } catch { vendorData = vendorText; }
+
+        if (Array.isArray(vendorData?.items) && vendorData.items.length > 0) {
+          const lastLine = vendorData.items[vendorData.items.length - 1];
+          const selfLink = lastLine.links?.find(l => l.rel === "self")?.href;
+          if (selfLink) {
+            const patchBody = { vendor: { id: String(newVendorId) }, subsidiary: { id: "6" }, preferred: true, currency: { id: "1" } };
+            console.log(`➡️ [NetSuite] PATCH Preferred Supplier ${selfLink}`);
+            console.log("   Payload:", JSON.stringify(patchBody));
+
+            const patchRes = await fetch(selfLink, {
+              method: "PATCH",
+              headers: { ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig), "Content-Type": "application/json", Prefer: "return=representation" },
+              body: JSON.stringify(patchBody),
+            });
+
+            const patchText = await patchRes.text();
+            let patchData; try { patchData = JSON.parse(patchText); } catch { patchData = patchText; }
+            console.log("⬅️ [NetSuite] Response:", patchData);
+          }
+        }
+      } catch (err) {
+        console.error("❌ Preferred Supplier update failed:", err);
+      }
+    }
+
+    // ✅ Base price update (inventory only)
+    if (basePriceVal !== undefined && finalRecordType === "inventoryItem") {
       const priceUrl = `${envConfig.restUrl}/inventoryItem/${row["Internal ID"]}/price`;
       const priceGetRes = await fetch(priceUrl, {
         method: "GET",
@@ -1484,7 +1577,12 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       }
     }
 
-    rowResult.status = rowResult.response.error || (rowResult.response.main && rowResult.response.main.error) ? "Error" : "Success";
+    // ✅ Final status
+    rowResult.status =
+      rowResult.response?.error ||
+      (rowResult.response?.main && rowResult.response.main.error)
+        ? "Error"
+        : "Success";
   } catch (err) {
     rowResult.status = "Error";
     rowResult.response.error = String(err);
@@ -1493,6 +1591,7 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
   return rowResult;
 }
+
 
 // 🔹 New concurrent runner
 async function runNextJob() {
