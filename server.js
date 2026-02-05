@@ -1454,8 +1454,13 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       try { json = text ? JSON.parse(text) : { status: "No Content (204)" }; }
       catch { json = text || { status: "No Content (204)" }; }
 
+      // ✅ log response status + body (critical)
+      console.log(`⬅️ [NetSuite] ${recordType} status: ${res.status}`);
+      console.log(`⬅️ [NetSuite] ${recordType} body:`, json);
+
       return { res, url, json };
     };
+
 
     let finalRecordType = "inventoryItem";
 
@@ -1464,22 +1469,22 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
       if (!attempt.res.ok && shouldRetryAsServiceItem(attempt.res, attempt.json)) {
         console.warn(`⚠️ inventoryItem PATCH failed (${attempt.res.status}). Retrying as serviceItem...`);
-        const retry = await patchItem("serviceItem");
+        const retry = await patchItem("servicesaleitem");
 
         rowResult.response.main = {
-          attempted: ["inventoryItem", "serviceItem"],
+          attempted: ["inventoryItem", "serviceitem"],
           inventoryItem: { status: attempt.res.status, url: attempt.url, body: attempt.json },
           serviceItem: { status: retry.res.status, url: retry.url, body: retry.json },
         };
 
         if (!retry.res.ok) {
           rowResult.status = "Error";
-          rowResult.response.error = `PATCH failed for inventoryItem and serviceItem. Statuses: ${attempt.res.status}, ${retry.res.status}`;
+          rowResult.response.error = `PATCH failed for inventoryItem and serviceitem. Statuses: ${attempt.res.status}, ${retry.res.status}`;
           return rowResult;
         }
 
-        finalRecordType = "serviceItem";
-        console.log("⬅️ [NetSuite] Response (serviceItem):", retry.json);
+        finalRecordType = "serviceitem";
+        console.log("⬅️ [NetSuite] Response (serviceitem):", retry.json);
       } else {
         rowResult.response.main = attempt.json;
 
@@ -1580,7 +1585,7 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
     // ✅ Final status
     rowResult.status =
       rowResult.response?.error ||
-      (rowResult.response?.main && rowResult.response.main.error)
+        (rowResult.response?.main && rowResult.response.main.error)
         ? "Error"
         : "Success";
   } catch (err) {
