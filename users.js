@@ -74,5 +74,13 @@ export const users = [
         prod_tokenId: "cec7f5003725ca6a65ffd060a07e56dbb85e46544966fc5cab452bc44f77ff99",
         prod_tokenSecret: "79d14c24d8f7f54094bdd819dfb57fc33d3a09e38195db7429da94a54fbabf86"
     },
+    {
+        username: "Lisa Tilbrook", 
+        password: "finance321",
+        sandbox_tokenId: "ce00e0cc81e10b66956c59028ab4ef010b0d30ce1a8e9ec7a5edcae78f279a38",
+        sandbox_tokenSecret:"0b2c62f2ef5db96bdf497e0a26d09b72ba73f436c9ea908fd7437330d6781654",
+        prod_tokenId: "176d9f8785e4f7590525c7081911e569e5c1090c008540aec960c2b943c61dda",
+        prod_tokenSecret: "c1f4788a2d6ea1a0dce5d1a02ed5fed960bfdc1541fd07dcfb7e7d7edf785b47"
+    }
 
 ];
