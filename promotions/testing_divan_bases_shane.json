@@ -7,23 +7,22 @@
       "rows": [
         {
           "label": "Nova Divan Base",
-          "discount": "25",
+          "discount": "5",
           "pos": "",
           "discPos": "",
           "other": "",
           "filters": [
             {
-              "field": "Class",
-              "value": "1"
-            },
-            {
-              "field": "Name",
-              "value": "Aura Solid Superior"
+              "field": "Category",
+              "ids": [
+                "101"
+              ],
+              "mode": "any"
             }
           ]
         }
       ]
     }
   ],
-  "savedAt": "2026-01-13T11:15:19.147Z"
+  "savedAt": "2026-02-18T13:01:36.967Z"
 }
