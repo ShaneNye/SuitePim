@@ -1,0 +1,1637 @@
+{
+  "title": "April 26 Trade In",
+  "sections": [
+    {
+      "label": "Bed Frames ",
+      "color": "rgba(225, 152, 152, 0.2)",
+      "rows": [
+        {
+          "label": "A Group Bed Frames ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "32"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "B Group Bed Frames ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "33"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "C Group Bed Frames ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "34"
+              ],
+              "mode": "any"
+            }
+          ]
+        },
+        {
+          "label": "D Group Bed Frames ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "35"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Harrington & Abbott ",
+      "color": "rgba(233, 175, 214, 0.2)",
+      "rows": [
+        {
+          "label": "Kelmscott Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "kelmscott 4524 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Wightwick Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "wightwick 6024 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Avebury Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Avebury 7124 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Rufford Ortho Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Rufford Ortho 7224 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Howfield Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Howfield 8024 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Kentwell Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Kentwell"
+            }
+          ]
+        },
+        {
+          "label": "Sheldon Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "sheldon"
+            }
+          ]
+        },
+        {
+          "label": "Carborne Ortho Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "carborne"
+            }
+          ]
+        },
+        {
+          "label": "Gosfield Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "gosfield"
+            }
+          ]
+        },
+        {
+          "label": "Harlington Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "harlington 26224 mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Blenhiem Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "blenheim mattress"
+            }
+          ]
+        },
+        {
+          "label": "Blenhiem Mattress Enhancer ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "Blenheim Enhancer"
+            }
+          ]
+        },
+        {
+          "label": "Asteria Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "asteria"
+            }
+          ]
+        },
+        {
+          "label": "Harmonia Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "harmonia"
+            }
+          ]
+        },
+        {
+          "label": "Neveah Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "neveah"
+            }
+          ]
+        },
+        {
+          "label": "Luna Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "luna"
+            }
+          ]
+        },
+        {
+          "label": "Aurora Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Name",
+              "value": "aurora"
+            }
+          ]
+        },
+        {
+          "label": "Harrington & Abbott Headboards ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Class",
+              "value": "10"
+            }
+          ]
+        },
+        {
+          "label": "Harrington & Abbott Bases",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1292"
+            },
+            {
+              "field": "Class",
+              "value": "1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Bamboo Mattresses",
+      "color": "rgba(198, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Nurture 4000 Mattress ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Nurture"
+            }
+          ]
+        },
+        {
+          "label": "Relaxation 6000 Mattress ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "relaxation 6000"
+            }
+          ]
+        },
+        {
+          "label": "Tranquility 8000 Mattress ",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "tranquility 8000"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Pure Mattresses",
+      "color": "rgba(233, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Pure Serene Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "pure serene"
+            }
+          ]
+        },
+        {
+          "label": "Pure Soothe Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "Pure soothe"
+            }
+          ]
+        },
+        {
+          "label": "Pure Support Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1252"
+            },
+            {
+              "field": "Name",
+              "value": "pure support"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Gel Mattresses",
+      "color": "rgba(179, 233, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Gel Essence Comfort Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel essence comfort"
+            }
+          ]
+        },
+        {
+          "label": "Gel Essence Ortho Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel essence ortho"
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Comfort Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel plush comfort "
+            }
+          ]
+        },
+        {
+          "label": "Gel Plush Ortho Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1402"
+            },
+            {
+              "field": "Name",
+              "value": "gel plush ortho "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Vio Sleep Mattresses",
+      "color": "rgba(201, 234, 179, 0.2)",
+      "rows": [
+        {
+          "label": "Earth Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "earth care"
+            }
+          ]
+        },
+        {
+          "label": "Flora Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "flora care"
+            }
+          ]
+        },
+        {
+          "label": "Ocean Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "ocean care"
+            }
+          ]
+        },
+        {
+          "label": "Forest Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "forest care"
+            }
+          ]
+        },
+        {
+          "label": "Meadow Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "meadow "
+            }
+          ]
+        },
+        {
+          "label": "Haven Care Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1326"
+            },
+            {
+              "field": "Name",
+              "value": "haven"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Sterling Mattresses",
+      "color": "rgba(234, 237, 233, 0.2)",
+      "rows": [
+        {
+          "label": "Cosy Siesta Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy siesta"
+            }
+          ]
+        },
+        {
+          "label": "Cosy Nap Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy nap mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Cosy Slumber Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "cosy slumber"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Easy Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze easy mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Rest Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze rest mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Snooze Calm Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "snooze calm mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Duke Comfort Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Duke comfort mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Duke Ortho Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "duke ortho"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Classic Mattresses",
+      "color": "rgba(195, 160, 207, 0.2)",
+      "rows": [
+        {
+          "label": "Classic Cashmere Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "Classic cashmere"
+            }
+          ]
+        },
+        {
+          "label": "Classic Cool Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "Classic cool"
+            }
+          ]
+        },
+        {
+          "label": "Classic Pocket Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "classic pocket"
+            }
+          ]
+        },
+        {
+          "label": "Classic Essential Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "classic essential"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Aura Mattresses",
+      "color": "rgba(98, 139, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Aura Support Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Support "
+            }
+          ]
+        },
+        {
+          "label": "Aura Ortho Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Ortho"
+            }
+          ]
+        },
+        {
+          "label": "Aura Cloud Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Cloud"
+            }
+          ]
+        },
+        {
+          "label": "Aura Essence Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1363"
+            },
+            {
+              "field": "Name",
+              "value": "Aura Essence"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Nova Mattress ",
+      "color": "rgba(234, 191, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Nova Balance Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova balance mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Nova Comfort Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova comfort mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Nova Ortho Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova ortho mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Nova Soothe Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "38249"
+            },
+            {
+              "field": "Name",
+              "value": "nova soothe mattress :"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Heritage Mattresses ",
+      "color": "rgba(234, 107, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Burley Mattress :",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "burley "
+            }
+          ]
+        },
+        {
+          "label": "Melbury Mattress ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "melbury"
+            }
+          ]
+        },
+        {
+          "label": "Hinton Mattress ",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "hinton"
+            }
+          ]
+        },
+        {
+          "label": "Rockford Mattress ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "rockford"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Heritage Deluxe Mattresses ",
+      "color": "rgba(231, 98, 234, 0.2)",
+      "rows": [
+        {
+          "label": "Deluxe Ortho ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe ortho"
+            }
+          ]
+        },
+        {
+          "label": "Deluxe Natural ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe natural"
+            }
+          ]
+        },
+        {
+          "label": "Deluxe Gel ",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe gel "
+            }
+          ]
+        },
+        {
+          "label": "Deluxe Comfort ",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1263"
+            },
+            {
+              "field": "Name",
+              "value": "deluxe comfort "
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Gemstone Mattresses",
+      "color": "rgba(218, 234, 98, 0.2)",
+      "rows": [
+        {
+          "label": "Emerald Mattress",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "emerald"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Rosaline Mattress",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "rosaline mattress : "
+            }
+          ]
+        },
+        {
+          "label": "Zircon Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "zircon"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Ruby Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ruby"
+            }
+          ]
+        },
+        {
+          "label": "Amatrix Mattress",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "amatrix mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Citrine Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "citrine mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Ironstone Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ironstone mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Amethyst Mattress",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "amethyst"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            }
+          ]
+        },
+        {
+          "label": "Garnet Mattress ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "garnet"
+            }
+          ]
+        },
+        {
+          "label": "Amber Mattress ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "amber"
+            }
+          ]
+        },
+        {
+          "label": "Lolite Mattress ",
+          "discount": "30",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1315"
+            },
+            {
+              "field": "Name",
+              "value": "lolite"
+            }
+          ]
+        },
+        {
+          "label": "Morion",
+          "discount": "50",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Morion mattress :"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Adjustables",
+      "color": "rgba(103, 91, 91, 0.2)",
+      "rows": [
+        {
+          "label": "Adjustable mattresses",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            },
+            {
+              "field": "Class",
+              "value": "15"
+            }
+          ]
+        },
+        {
+          "label": "Adjustable bases ",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            },
+            {
+              "field": "Name",
+              "value": "base"
+            }
+          ]
+        },
+        {
+          "label": "adjustable frames",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "338"
+            }
+          ]
+        },
+        {
+          "label": "adjustable headboards",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Class",
+              "value": "10"
+            },
+            {
+              "field": "Preferred Supplier",
+              "value": "1238"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Jet, Ebony, Pearl, Ivory",
+      "color": "rgba(5, 5, 5, 0.2)",
+      "rows": [
+        {
+          "label": "Ebony",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "ebony natural mattress"
+            }
+          ]
+        },
+        {
+          "label": "Jet Memory",
+          "discount": "40",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Jet Memory"
+            }
+          ]
+        },
+        {
+          "label": "Ivory ",
+          "discount": "60",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Ivory Mattress :"
+            }
+          ]
+        },
+        {
+          "label": "Pearl",
+          "discount": "60",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Pearl Mattress :"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Adjust a Bed Frames",
+      "color": "rgba(80, 36, 240, 0.2)",
+      "rows": [
+        {
+          "label": "Buttermere",
+          "discount": "55",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "Buttermere"
+            }
+          ]
+        },
+        {
+          "label": "Seacale",
+          "discount": "55",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "seacale"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "Divan Bases",
+      "color": "rgba(213, 7, 7, 0.2)",
+      "rows": [
+        {
+          "label": "Classic",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "classic divan base :"
+            }
+          ]
+        },
+        {
+          "label": "Eastwood",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "eastwood divan base :"
+            }
+          ]
+        },
+        {
+          "label": "Northcrest",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "northcrest divan base :"
+            }
+          ]
+        },
+        {
+          "label": "Nature",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nature base :"
+            }
+          ]
+        },
+        {
+          "label": "Aura",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "aura solid"
+            }
+          ]
+        },
+        {
+          "label": "Nova",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nova standard base"
+            }
+          ]
+        },
+        {
+          "label": "Quantum",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "quantum base"
+            }
+          ]
+        },
+        {
+          "label": "True edge",
+          "discount": "20",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "True edge 1000 base :"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2026-02-24T09:52:21.186Z"
+}
