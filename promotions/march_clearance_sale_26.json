@@ -7,7 +7,7 @@
       "rows": [
         {
           "label": "A Group Bed Frames ",
-          "discount": "0",
+          "discount": "25",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -23,7 +23,7 @@
         },
         {
           "label": "B Group Bed Frames ",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -55,7 +55,7 @@
         },
         {
           "label": "D Group Bed Frames ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1034,7 +1034,7 @@
       "rows": [
         {
           "label": "Burley Mattress :",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1051,7 +1051,7 @@
         },
         {
           "label": "Melbury Mattress ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1068,7 +1068,7 @@
         },
         {
           "label": "Hinton Mattress ",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1125,7 +1125,7 @@
         },
         {
           "label": "Deluxe Natural ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1142,7 +1142,7 @@
         },
         {
           "label": "Deluxe Gel ",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1159,7 +1159,7 @@
         },
         {
           "label": "Deluxe Comfort ",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1182,7 +1182,7 @@
       "rows": [
         {
           "label": "Emerald Mattress",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1199,7 +1199,7 @@
         },
         {
           "label": "Rosaline Mattress",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1212,7 +1212,7 @@
         },
         {
           "label": "Zircon Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1229,7 +1229,7 @@
         },
         {
           "label": "Ruby Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1242,7 +1242,7 @@
         },
         {
           "label": "Amatrix Mattress",
-          "discount": "0",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1281,7 +1281,7 @@
         },
         {
           "label": "Amethyst Mattress",
-          "discount": "50",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1298,7 +1298,7 @@
         },
         {
           "label": "Garnet Mattress ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1315,7 +1315,7 @@
         },
         {
           "label": "Amber Mattress ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1332,7 +1332,7 @@
         },
         {
           "label": "Lolite Mattress ",
-          "discount": "0",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1349,7 +1349,7 @@
         },
         {
           "label": "Morion",
-          "discount": "0",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1438,7 +1438,7 @@
       "rows": [
         {
           "label": "Ebony",
-          "discount": "70",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1451,7 +1451,7 @@
         },
         {
           "label": "Jet Memory",
-          "discount": "70",
+          "discount": "50",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1464,7 +1464,7 @@
         },
         {
           "label": "Ivory ",
-          "discount": "0",
+          "discount": "70",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1477,7 +1477,7 @@
         },
         {
           "label": "Pearl",
-          "discount": "0",
+          "discount": "70",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1633,5 +1633,5 @@
       ]
     }
   ],
-  "savedAt": "2026-01-26T14:09:41.309Z"
+  "savedAt": "2026-02-24T09:47:40.464Z"
 }
