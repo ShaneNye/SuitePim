@@ -90,5 +90,12 @@ export const users = [
         prod_tokenId: "64262453890e8e584bb8c078eedf616d7db89952a4aec327450cc3d2fc07f113",
         prod_tokenSecret:"df088327027058e57bf33e5abc6e00800bcc6d02c4e006148b7a5d2016cd9986"
     },
-
+    {
+        username: "Sonia Mellowship",
+        password: "Soniam68!",
+        sandbox_tokenId: "8801de4a95c22284a315ae4a19f88157bcd2e3d9baf58fefcb141a11b7b98246",
+        sandbox_tokenSecret: "2661c5cde13845a24a89e864b49e76ff9e34141a8a7cd77c1086f6b2f5d23ec6",
+        prod_tokenId: "be99b270389ee5131b0ca25b848ff5f1f8dfd07b23e79f8216befa9870c9c460",
+        prod_tokenSecret: "81e8c82a113e4ae26bd3596b1cf511fe80116aed2496b754f2b59f36a8c27177"
+    },
 ];
