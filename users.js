@@ -81,6 +81,14 @@ export const users = [
         sandbox_tokenSecret:"0b2c62f2ef5db96bdf497e0a26d09b72ba73f436c9ea908fd7437330d6781654",
         prod_tokenId: "176d9f8785e4f7590525c7081911e569e5c1090c008540aec960c2b943c61dda",
         prod_tokenSecret: "c1f4788a2d6ea1a0dce5d1a02ed5fed960bfdc1541fd07dcfb7e7d7edf785b47"
-    }
+    },
+        {
+        username: "Paula Pickering",
+        password: "marketing1234",
+        sandbox_tokenId:"70ed657fee9783e9a3da49358c07b82b3a0de08f62ece827569c602375dd409d",
+        sandbox_tokenSecret:"ec6a03af0e283524fc22a7089751fd36a52e1c2dc178d2fe979d71e435d1ecf0",
+        prod_tokenId: "64262453890e8e584bb8c078eedf616d7db89952a4aec327450cc3d2fc07f113",
+        prod_tokenSecret:"df088327027058e57bf33e5abc6e00800bcc6d02c4e006148b7a5d2016cd9986"
+    },
 
 ];
