@@ -1,0 +1,28 @@
+{
+  "title": "H&A Headboards correction",
+  "sections": [
+    {
+      "label": "H&A headboards",
+      "color": "",
+      "rows": [
+        {
+          "label": "H&A headboards",
+          "discount": "0",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Category",
+              "ids": [
+                "86"
+              ],
+              "mode": "any"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "savedAt": "2026-03-31T15:03:13.564Z"
+}
