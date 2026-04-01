@@ -126,6 +126,79 @@ const NETSUITE_PROD = {
   restUrl: process.env.NETSUITE_PROD_URL,
 };
 
+function getPriceRestletUrl(environment) {
+  return String(environment || "").toLowerCase() === "production"
+    ? (process.env.NETSUITE_PROD_PRICE_RESTLET_URL || process.env.NETSUITE_PRICE_RESTLET_URL)
+    : (process.env.NETSUITE_SANDBOX_PRICE_RESTLET_URL || process.env.NETSUITE_PRICE_RESTLET_URL);
+}
+
+async function callPriceRestlet({
+  environment,
+  envConfig,
+  user,
+  internalId,
+  recordType,
+  price,
+  priceLevelId,
+  currencyId = 1,
+  quantityColumn = 0,
+  quantityColumns = null,
+}) {
+  const restletUrl = getPriceRestletUrl(environment);
+  const { tokenId, tokenSecret } = user;
+
+  if (!restletUrl) {
+    throw new Error("Missing NETSUITE price RESTlet URL in environment variables");
+  }
+
+  const body = {
+    internalId: String(internalId),
+    recordType: String(recordType),
+    price: Number(price),
+    priceLevelId: Number(priceLevelId),
+    currencyId: Number(currencyId),
+  };
+
+  if (Array.isArray(quantityColumns) && quantityColumns.length) {
+    body.quantityColumns = quantityColumns.map(Number);
+  } else {
+    body.quantityColumn = Number(quantityColumn);
+  }
+
+  console.log(`➡️ [NetSuite RESTlet] POST ${restletUrl}`);
+  console.log("   Payload:", JSON.stringify(body));
+
+  const res = await fetch(restletUrl, {
+    method: "POST",
+    headers: {
+      ...getAuthHeader(restletUrl, "POST", tokenId, tokenSecret, envConfig),
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = text;
+  }
+
+  console.log("⬅️ [NetSuite RESTlet] Response:", data);
+
+  if (!res.ok || data?.success === false) {
+    throw new Error(
+      `Price RESTlet failed: ${typeof data === "string" ? data : JSON.stringify(data)}`
+    );
+  }
+
+  return data;
+}
+
+
+
 // Helper to map string -> config
 function getEnvConfigFromName(name) {
   return (String(name || "").toLowerCase() === "production") ? NETSUITE_PROD : NETSUITE_SANDBOX;
@@ -1245,6 +1318,7 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
     // --- Validation jobs ---
     if (type === "validation") {
       rowResult = { internalid: row.internalid, status: "Pending", response: null };
+
       if (!row.internalid) {
         rowResult.status = "Skipped";
         rowResult.response = { reason: "Missing Internal ID" };
@@ -1282,108 +1356,102 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
     // --- Promotion Push jobs ---
     if (type === "promotion-push") {
-      rowResult = { id: row.id, name: row.name, status: "Pending", response: {} };
+      rowResult = {
+        id: row.id,
+        name: row.name,
+        status: "Pending",
+        response: {},
+      };
+
       try {
-        const priceUrl = `${envConfig.restUrl}/inventoryItem/${row.id}/price`;
-        const { tokenId, tokenSecret } = user;
+        const newSalePrice = parseFloat(row.salePrice);
+        const newRegularPrice = parseFloat(row.basePrice || 0);
 
-        const priceGetRes = await fetch(priceUrl, {
-          method: "GET",
-          headers: {
-            ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
-            "Content-Type": "application/json",
-          },
-        });
-
-        const priceGetText = await priceGetRes.text();
-        let priceGetData;
-        try { priceGetData = JSON.parse(priceGetText); } catch { priceGetData = priceGetText; }
-
-        if (Array.isArray(priceGetData?.items)) {
-          for (const item of priceGetData.items) {
-            const selfLink = item.links?.find((l) => l.rel === "self")?.href;
-            if (!selfLink || !selfLink.includes("pricelevel=4")) continue;
-
-            const currentRes = await fetch(selfLink, {
-              method: "GET",
-              headers: {
-                ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
-                "Content-Type": "application/json",
-              },
+        // ✅ NetSuite promo price via RESTlet (price level 4)
+        if (Number.isFinite(newSalePrice)) {
+          try {
+            const nsPriceResult = await callPriceRestlet({
+              environment,
+              envConfig,
+              user,
+              internalId: row.id,
+              recordType: "inventoryItem",
+              price: newSalePrice,
+              priceLevelId: 4,
+              currencyId: 1,
+              quantityColumns: [0, 1],
             });
-            const currentText = await currentRes.text();
-            let currentData;
-            try { currentData = JSON.parse(currentText); } catch { currentData = currentText; }
 
-            const newSalePrice = parseFloat(row.salePrice);
-            const newRegularPrice = parseFloat(row.basePrice || 0);
-
-            if (currentData.price !== newSalePrice) {
-              const patchBody = { price: newSalePrice };
-              console.log(`➡️ [NetSuite] PATCH ${selfLink}`);
-              console.log("   Payload:", JSON.stringify(patchBody));
-
-              const priceRes = await fetch(selfLink, {
-                method: "PATCH",
-                headers: {
-                  ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
-                  "Content-Type": "application/json",
-                  Prefer: "return=representation",
-                },
-                body: JSON.stringify(patchBody),
-              });
-
-              const priceText = await priceRes.text();
-              let priceData;
-              try { priceData = JSON.parse(priceText); } catch { priceData = priceText; }
-
-              console.log("⬅️ [NetSuite] Response:", priceData);
-              rowResult.response.netsuite = priceData;
-              rowResult.status = "Success";
-            } else {
-              rowResult.response.netsuite = { skipped: true, reason: "Already correct" };
-              rowResult.status = "Skipped";
-            }
-
-            // 🔄 WooCommerce sync
-            try {
-              const wooApi = getWooApi(environment);
-              if (row.wooId) {
-                const { data: product } = await wooApi.get(`products/${row.wooId}`);
-                const updatePayload = {
-                  regular_price: newRegularPrice.toFixed(2),
-                  sale_price: newSalePrice.toFixed(2),
-                };
-
-                let wooResponse;
-                if (product.parent_id && product.parent_id !== 0) {
-                  wooResponse = await wooApi.put(
-                    `products/${product.parent_id}/variations/${product.id}`,
-                    updatePayload
-                  );
-                } else {
-                  wooResponse = await wooApi.put(`products/${product.id}`, updatePayload);
-                }
-
-                console.log("⬅️ [WooCommerce] Response:", wooResponse.data);
-                rowResult.response.woocommerce = { success: true, ...wooResponse.data };
-              } else {
-                rowResult.response.woocommerce = { skipped: true, reason: "Missing Woo Id" };
-              }
-            } catch (wooErr) {
-              rowResult.response.woocommerce = { error: wooErr.message };
-              console.error("❌ WooCommerce update failed:", wooErr.message);
-            }
+            rowResult.response.netsuite = nsPriceResult;
+          } catch (nsErr) {
+            rowResult.response.netsuite = { error: nsErr.message };
+            console.error("❌ NetSuite promo price update failed:", nsErr.message);
           }
         } else {
+          rowResult.response.netsuite = {
+            skipped: true,
+            reason: "Invalid sale price",
+          };
+        }
+
+        // 🔄 WooCommerce sync
+        try {
+          const wooApi = getWooApi(environment);
+
+          if (row.wooId) {
+            const { data: product } = await wooApi.get(`products/${row.wooId}`);
+
+            const updatePayload = {
+              regular_price: Number.isFinite(newRegularPrice)
+                ? newRegularPrice.toFixed(2)
+                : "0.00",
+              sale_price: Number.isFinite(newSalePrice)
+                ? newSalePrice.toFixed(2)
+                : "",
+            };
+
+            let wooResponse;
+            if (product.parent_id && product.parent_id !== 0) {
+              wooResponse = await wooApi.put(
+                `products/${product.parent_id}/variations/${product.id}`,
+                updatePayload
+              );
+            } else {
+              wooResponse = await wooApi.put(`products/${product.id}`, updatePayload);
+            }
+
+            console.log("⬅️ [WooCommerce] Response:", wooResponse.data);
+            rowResult.response.woocommerce = { success: true, ...wooResponse.data };
+          } else {
+            rowResult.response.woocommerce = {
+              skipped: true,
+              reason: "Missing Woo Id",
+            };
+          }
+        } catch (wooErr) {
+          rowResult.response.woocommerce = { error: wooErr.message };
+          console.error("❌ WooCommerce update failed:", wooErr.message);
+        }
+
+        const nsFailed = !!rowResult.response.netsuite?.error;
+        const wooFailed = !!rowResult.response.woocommerce?.error;
+
+        if (nsFailed || wooFailed) {
           rowResult.status = "Error";
-          rowResult.response.netsuite = { error: "Unexpected GET response", data: priceGetData };
+        } else if (
+          rowResult.response.netsuite?.skipped &&
+          rowResult.response.woocommerce?.skipped
+        ) {
+          rowResult.status = "Skipped";
+        } else {
+          rowResult.status = "Success";
         }
       } catch (err) {
         rowResult.status = "Error";
         rowResult.response = { error: String(err) };
         console.error("❌ Promotion push exception:", err);
       }
+
       return rowResult;
     }
 
@@ -1409,20 +1477,34 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
     let basePriceVal;
 
     for (const field of fieldMap) {
+      // ✅ Skip fields that do not map to a NetSuite internal id
+      // except special handlers below
+      if (!field.internalid && field.name !== "Base Price" && field.name !== "Preferred Supplier") {
+        continue;
+      }
+
+      // --- Base Price handled separately via RESTlet ---
       if (field.name === "Base Price") {
         const val = parseFloat(row[field.name]);
         if (!isNaN(val)) basePriceVal = val;
         continue;
       }
+
+      // --- Multiple Select ---
       if (field.fieldType === "multiple-select") {
         const ids = row[`${field.name}_InternalId`];
-        if (Array.isArray(ids)) {
-          payload[field.internalid] = { items: ids.map((id) => ({ id: String(id) })) };
+        if (Array.isArray(ids) && field.internalid) {
+          payload[field.internalid] = {
+            items: ids.map((id) => ({ id: String(id) })),
+          };
         }
         continue;
       }
+
+      // --- Preferred Supplier ---
       if (field.name === "Preferred Supplier") {
         const newVendorId = row[`${field.name}_InternalId`] ?? null;
+
         if (newVendorId) {
           try {
             // ⚠️ Vendors only exist on inventory items; skip if this is a service item
@@ -1444,11 +1526,16 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
             const vendorText = await vendorRes.text();
             let vendorData;
-            try { vendorData = JSON.parse(vendorText); } catch { vendorData = vendorText; }
+            try {
+              vendorData = JSON.parse(vendorText);
+            } catch {
+              vendorData = vendorText;
+            }
 
             if (Array.isArray(vendorData?.items) && vendorData.items.length > 0) {
               const lastLine = vendorData.items[vendorData.items.length - 1];
               const selfLink = lastLine.links?.find((l) => l.rel === "self")?.href;
+
               if (selfLink) {
                 const patchBody = {
                   vendor: { id: String(newVendorId) },
@@ -1456,6 +1543,7 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
                   preferred: true,
                   currency: { id: "1" },
                 };
+
                 console.log(`➡️ [NetSuite] PATCH Preferred Supplier ${selfLink}`);
                 console.log("   Payload:", JSON.stringify(patchBody));
 
@@ -1471,7 +1559,12 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
                 const patchText = await patchRes.text();
                 let patchData;
-                try { patchData = JSON.parse(patchText); } catch { patchData = patchText; }
+                try {
+                  patchData = JSON.parse(patchText);
+                } catch {
+                  patchData = patchText;
+                }
+
                 console.log("⬅️ [NetSuite] Response:", patchData);
               }
             }
@@ -1479,48 +1572,83 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
             console.error("❌ Preferred Supplier update failed:", err);
           }
         }
+
         continue;
       }
+
+      // --- List/Record ---
       if (field.fieldType === "List/Record") {
         const internalIdValue = row[`${field.name}_InternalId`] ?? null;
-        if (internalIdValue !== null && internalIdValue !== "") {
+
+        if (
+          field.internalid &&
+          internalIdValue !== null &&
+          internalIdValue !== ""
+        ) {
           payload[field.internalid] = { id: String(internalIdValue) };
         }
         continue;
       }
+
+      // --- Images ---
       if (field.fieldType === "image") {
         const fileId = row[`${field.name}_InternalId`];
+
         if (fileId && String(fileId).trim() !== "") {
           const suiteletUrl = getImageEndpoint(environment);
           const url = `${suiteletUrl}&itemid=${internalId}&fileid=${fileId}&fieldid=${field.internalid}`;
+
           try {
             const res = await fetch(url, { method: "GET" });
             const text = await res.text();
+
             let data;
-            try { data = JSON.parse(text); } catch { data = text; }
-            rowResult.response.images.push({ field: field.internalid, result: data });
+            try {
+              data = JSON.parse(text);
+            } catch {
+              data = text;
+            }
+
+            rowResult.response.images.push({
+              field: field.internalid,
+              result: data,
+            });
           } catch (err) {
-            rowResult.response.images.push({ field: field.internalid, error: String(err) });
+            rowResult.response.images.push({
+              field: field.internalid,
+              error: String(err),
+            });
           }
         }
+
         continue;
       }
 
+      // --- Standard field mapping ---
       const value = row[field.name];
-      if (value !== undefined && value !== null && !(typeof value === "string" && value.trim() === "")) {
+      if (
+        value !== undefined &&
+        value !== null &&
+        !(typeof value === "string" && value.trim() === "")
+      ) {
+        if (!field.internalid) continue;
+
         if (field.fieldType === "Currency") {
           payload[field.internalid] = parseFloat(value) || 0;
         } else if (field.fieldType === "Checkbox") {
-          const v = (typeof value === "string" ? value.trim().toLowerCase() : value);
-          payload[field.internalid] = v === true || v === 1 || ["true", "t", "1", "y", "yes"].includes(v);
+          const v = typeof value === "string" ? value.trim().toLowerCase() : value;
+          payload[field.internalid] =
+            v === true ||
+            v === 1 ||
+            ["true", "t", "1", "y", "yes"].includes(v);
         } else {
           payload[field.internalid] = String(value);
         }
       }
     }
 
-    const url = `${envConfig.restUrl}/${recordType}/${internalId}`;
     const { tokenId, tokenSecret } = user;
+    const url = `${envConfig.restUrl}/${recordType}/${internalId}`;
 
     if (Object.keys(payload).length > 0) {
       console.log(`➡️ [NetSuite] PATCH ${url}`);
@@ -1546,72 +1674,65 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       console.log("⬅️ [NetSuite] Response:", rowResult.response.main);
     }
 
-    // ✅ base price update (uses resolved recordType)
-    if (basePriceVal !== undefined) {
-      const priceUrl = `${envConfig.restUrl}/${recordType}/${internalId}/price`;
-      const priceGetRes = await fetch(priceUrl, {
-        method: "GET",
-        headers: {
-          ...getAuthHeader(priceUrl, "GET", tokenId, tokenSecret, envConfig),
-          "Content-Type": "application/json",
-        },
-      });
+// ✅ Base Price via RESTlet
+if (basePriceVal !== undefined) {
+  try {
+    const priceResult = await callPriceRestlet({
+      environment,
+      envConfig,
+      user,
+      internalId,
+      recordType,
+      price: basePriceVal,
+      priceLevelId: 1,
+      currencyId: 1,
+      quantityColumns: [0, 1],
+    });
 
-      const priceGetText = await priceGetRes.text();
-      let priceGetData;
-      try { priceGetData = JSON.parse(priceGetText); } catch { priceGetData = priceGetText; }
+    rowResult.response.prices.push({
+      success: true,
+      recordType,
+      internalId,
+      newValue: basePriceVal,
+      result: priceResult,
+    });
+  } catch (priceErr) {
+    rowResult.response.prices.push({
+      success: false,
+      recordType,
+      internalId,
+      newValue: basePriceVal,
+      error: priceErr.message,
+    });
 
-      if (Array.isArray(priceGetData?.items)) {
-        for (const item of priceGetData.items) {
-          const selfLink = item.links?.find((l) => l.rel === "self")?.href;
-          if (!selfLink || !selfLink.includes("pricelevel=1")) continue;
+    console.error("❌ Base Price RESTlet update failed:", priceErr.message);
+  }
+}
 
-          const currentRes = await fetch(selfLink, {
-            method: "GET",
-            headers: {
-              ...getAuthHeader(selfLink, "GET", tokenId, tokenSecret, envConfig),
-              "Content-Type": "application/json",
-            },
-          });
+    // ✅ Final status logic
+    const mainFailed =
+      !!rowResult.response.error ||
+      !!(rowResult.response.main && rowResult.response.main.error);
 
-          const currentText = await currentRes.text();
-          let currentData;
-          try { currentData = JSON.parse(currentText); } catch { currentData = currentText; }
+    const priceFailed =
+      Array.isArray(rowResult.response.prices) &&
+      rowResult.response.prices.some((p) => p && p.success === false);
 
-          if (currentData.price !== basePriceVal) {
-            const patchBody = { price: basePriceVal };
-            console.log(`➡️ [NetSuite] PATCH Base Price ${selfLink}`);
-            console.log("   Payload:", JSON.stringify(patchBody));
+    const imageFailed =
+      Array.isArray(rowResult.response.images) &&
+      rowResult.response.images.some((img) => !!img.error);
 
-            const priceRes = await fetch(selfLink, {
-              method: "PATCH",
-              headers: {
-                ...getAuthHeader(selfLink, "PATCH", tokenId, tokenSecret, envConfig),
-                "Content-Type": "application/json",
-                Prefer: "return=representation",
-              },
-              body: JSON.stringify(patchBody),
-            });
-
-            const priceText = await priceRes.text();
-            let priceData;
-            try { priceData = JSON.parse(priceText); } catch { priceData = priceText; }
-
-            console.log("⬅️ [NetSuite] Response:", priceData);
-            rowResult.response.prices.push({
-              link: selfLink,
-              newValue: basePriceVal,
-              result: priceData,
-            });
-          }
-        }
-      }
+    if (mainFailed || priceFailed || imageFailed) {
+      rowResult.status = "Error";
+    } else if (
+      rowResult.response.main ||
+      (Array.isArray(rowResult.response.images) && rowResult.response.images.length > 0) ||
+      (Array.isArray(rowResult.response.prices) && rowResult.response.prices.length > 0)
+    ) {
+      rowResult.status = "Success";
+    } else {
+      rowResult.status = "Skipped";
     }
-
-    rowResult.status =
-      rowResult.response.error || (rowResult.response.main && rowResult.response.main.error)
-        ? "Error"
-        : "Success";
   } catch (err) {
     rowResult.status = "Error";
     rowResult.response.error = String(err);
