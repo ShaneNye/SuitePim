@@ -98,4 +98,27 @@ export const users = [
         prod_tokenId: "be99b270389ee5131b0ca25b848ff5f1f8dfd07b23e79f8216befa9870c9c460",
         prod_tokenSecret: "81e8c82a113e4ae26bd3596b1cf511fe80116aed2496b754f2b59f36a8c27177"
     },
+    {
+        username: "Julie Rayment",
+        password: "Finley0825!",
+        sandbox_tokenId:"",
+        sandbox_tokenSecret: "",
+        prod_tokenId: "ef48abe38f056ca470b18b453d2457207ef20e64f8a86bf2abb8be28d5f3e90c",
+        prod_tokenSecret: "1f4ebf8c5d1c570e50c2bf2c5e07ba44af9ca53b9ec455c638c156cf6543409c"
+    },
+    {
+        username: "Luke Matthews",
+        password: "Sistema11",
+        sandbox_tokenId: "",
+        sandbox_tokenSecret: "",
+        prod_tokenId: "b2520a34cb26e1af60b24f7fffc31d2d95cf9ac7deb690475f3a72e9404a984c",
+        prod_tokenSecret: "d901b08445203fc5166ece0a942d7c565b4764bb5e9db7acd5814e3f3ab6b4cf"
+    },
+    {
+        username : "Fay Hodson",
+        sandbox_tokenId: "blender4life",
+        sandbox_tokenSecret: "",
+        prod_tokenId: "3122393c69fcf2a360d227aaf21b97f8fae1c040347fbd0d03aebcf70acb082f",
+        prod_tokenSecret: "018093be70f2a644a80f0ee21e4d5c4661d0de3363d85e83102d89ed1504d02a"
+    }
 ];
