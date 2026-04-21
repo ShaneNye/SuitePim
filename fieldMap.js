@@ -30,6 +30,10 @@ const mapenvironment = [
     ProdUrl:
       "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4352&deploy=1&compid=7972741&ns-at=AAEJ7tMQMfdQuRFm3vrD69S7SrazDWZtpj-3h8yWEw-pEo7xJpM",
   },
+  {
+    name: "Epos Fabric Colours",
+    ProdUrl: "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4519&deploy=1&compid=7972741&ns-at=AAEJ7tMQx1il7XmlrmBP3OnEFOcOaQ3fBQP5LRSYMiDumyAXS4c"
+  }
 ];
 
 // Determine environment safely (browser vs server)
@@ -69,5 +73,7 @@ export const fieldMap = [
   { name: "Inactive", internalid: "isinactive", fieldType: "Checkbox" },
   { name: "Is Parent", internalid: "parent", fieldType: "Checkbox" },
   { name: "NS Record", internalid: "nsrecord", fieldType: "Link" },
+  {name: "Fabric / Colours", internalid: "custitem_sb_epos_fab_colours", fieldType: "multiple-select", jsonFeed: urlFor("Epos Fabric Colours")},
+
 
 ];

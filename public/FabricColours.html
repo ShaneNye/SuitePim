@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epos : Fabric Colours</title>
+
+    <script src="/js/header.js"></script>
+    <script src="/js/footerStatus.js"></script>
+    <script src="/js/FabricColours.js" defer></script>
+
+    <link rel="stylesheet" href="/css/home/home.css">
+    <link rel="stylesheet" href="/css/footer/footer.css">
+    <link rel="stylesheet" href="/css/ProductData/FabricColours.css">
+</head>
+<body>
+    <div id="header-container"></div>
+
+    <div class="page-title">
+        <h1 id="page-title">Fabric Colours</h1>
+    </div>
+
+    <div class="fabric-colours-page">
+        <aside class="fabric-sidebar">
+            <div class="fabric-sidebar-header">
+                <h3>Fabric / Colour Records</h3>
+
+                <input
+                    id="fabric-search"
+                    class="fabric-search"
+                    type="text"
+                    placeholder="Search fabric or colour..."
+                >
+
+                <div class="fabric-create-wrap">
+                    <div class="fabric-split-btn">
+                        <button id="new-colour-btn" class="fabric-split-btn-main" type="button">
+                            New Colour
+                        </button>
+
+                        <button id="fabric-create-toggle" class="fabric-split-btn-toggle" type="button">
+                            ▼
+                        </button>
+
+                        <div id="fabric-create-menu" class="fabric-split-menu hidden">
+                            <button class="fabric-split-menu-item" id="menu-new-colour" type="button">
+                                New Colour
+                            </button>
+                            <button class="fabric-split-menu-item" id="menu-new-fabric" type="button">
+                                New Fabric
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul id="fabric-list" class="fabric-list">
+                <li class="loading-state">Loading records...</li>
+            </ul>
+        </aside>
+
+        <main id="fabric-main" class="fabric-main">
+            <h2>Fabric Colours</h2>
+            <p>Select a record from the left, or create a new one.</p>
+        </main>
+    </div>
+
+    <div id="footer-container"></div>
+</body>
+</html>

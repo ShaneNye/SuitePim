@@ -989,8 +989,419 @@ app.get("/WoocommerceConnector.html", authMiddleware, (req, res) => {
   res.sendFile(join(__dirname, "public", "WoocommerceConnector.html"));
 });
 
+/*-------------------------------
+    Epos Fabric Option intergration
+    ------------------------------*/
+app.post("/api/fabric-records/save", authMiddleware, async (req, res) => {
+  try {
+    const envConfig = getEnvConfig(req);
+    const environment = req.session.environment || "Sandbox";
+    const user = req.session.user;
+
+    const restletUrl =
+      String(environment).toLowerCase() === "production"
+        ? process.env.NETSUITE_PROD_FABRIC_RESTLET_URL
+        : process.env.NETSUITE_SANDBOX_FABRIC_RESTLET_URL;
+
+    if (!restletUrl) {
+      return res.status(500).json({
+        success: false,
+        message: "Missing fabric RESTlet URL in environment variables",
+      });
+    }
+
+    const payload = req.body || {};
+    const { tokenId, tokenSecret } = user;
+
+    console.log(`➡️ [Fabric RESTlet] POST ${restletUrl}`);
+    console.log("   Payload:", JSON.stringify(payload));
+
+    const nsRes = await fetch(restletUrl, {
+      method: "POST",
+      headers: {
+        ...getAuthHeader(restletUrl, "POST", tokenId, tokenSecret, envConfig),
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await nsRes.text();
+    let data;
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = text;
+    }
+
+    console.log("⬅️ [Fabric RESTlet] Response:", data);
+
+    if (!nsRes.ok || data?.success === false) {
+      return res.status(500).json({
+        success: false,
+        message: "NetSuite fabric RESTlet failed",
+        details: data,
+      });
+    }
+
+    res.json({
+      success: true,
+      result: data,
+    });
+  } catch (err) {
+    console.error("❌ Fabric save route error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while saving fabric record",
+      error: err.message,
+    });
+  }
+});
 
 
+app.post("/api/fabric-records/queue-sync", authMiddleware, async (req, res) => {
+  try {
+    const {
+      fabricColourId,
+      label,
+      items = [],
+      originalItems = [],
+    } = req.body || {};
+
+    if (!fabricColourId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing fabricColourId",
+      });
+    }
+
+    const envConfig = getEnvConfig(req);
+    const environment = req.session.environment || "Sandbox";
+
+    const newIds = uniqueStringIds(
+      (Array.isArray(items) ? items : []).map((i) => i?.internalid || i?.id || i)
+    );
+
+    const oldIds = uniqueStringIds(
+      (Array.isArray(originalItems) ? originalItems : []).map((i) => i?.internalid || i?.id || i)
+    );
+
+    const itemsToAdd = newIds.filter((id) => !oldIds.includes(id));
+    const itemsToRemove = oldIds.filter((id) => !newIds.includes(id));
+
+    const rows = [];
+
+    for (const itemId of itemsToAdd) {
+      const parentInfo = await getInventoryItemInfo(envConfig, req.session.user, itemId);
+      const children = await getChildInventoryItems(envConfig, req.session.user, itemId);
+
+      rows.push({
+        mode: "add",
+        level: "parent",
+        itemId: String(itemId),
+        itemName: parentInfo.name || `Item ${itemId}`,
+        fabricColourId: String(fabricColourId),
+      });
+
+      for (const child of children) {
+        rows.push({
+          mode: "add",
+          level: "child",
+          itemId: String(child.internalid),
+          itemName: child.name || `Item ${child.internalid}`,
+          parentId: String(itemId),
+          parentName: parentInfo.name || `Item ${itemId}`,
+          fabricColourId: String(fabricColourId),
+        });
+      }
+    }
+
+    for (const itemId of itemsToRemove) {
+      const parentInfo = await getInventoryItemInfo(envConfig, req.session.user, itemId);
+      const children = await getChildInventoryItems(envConfig, req.session.user, itemId);
+
+      rows.push({
+        mode: "remove",
+        level: "parent",
+        itemId: String(itemId),
+        itemName: parentInfo.name || `Item ${itemId}`,
+        fabricColourId: String(fabricColourId),
+      });
+
+      for (const child of children) {
+        rows.push({
+          mode: "remove",
+          level: "child",
+          itemId: String(child.internalid),
+          itemName: child.name || `Item ${child.internalid}`,
+          parentId: String(itemId),
+          parentName: parentInfo.name || `Item ${itemId}`,
+          fabricColourId: String(fabricColourId),
+        });
+      }
+    }
+
+    const jobId = createJobId();
+
+    jobs[jobId] = {
+      type: "fabric-colour-sync",
+      status: "pending",
+      label: label || `Fabric Colour ${fabricColourId}`,
+      fabricColourId: String(fabricColourId),
+      progressMessage: "Queued",
+      total: rows.length || 1,
+      processed: 0,
+      results: [],
+      rows,
+      user: req.session.user,
+      envConfig,
+      environment,
+      createdAt: new Date(),
+    };
+
+    jobQueue.push(jobId);
+    if (jobQueue.length === 1) runNextJob();
+
+    res.json({
+      success: true,
+      jobId,
+      queuePos: jobQueue.indexOf(jobId) + 1,
+      queueTotal: jobQueue.length,
+    });
+  } catch (err) {
+    console.error("❌ Fabric queue sync route error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to queue fabric sync job",
+      error: err.message,
+    });
+  }
+});
+
+function uniqueStringIds(values = []) {
+  return [...new Set(
+    values
+      .map((v) => String(v || "").trim())
+      .filter(Boolean)
+  )];
+}
+
+function normalizeNsMultiSelect(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return uniqueStringIds(
+      value.map((v) => {
+        if (typeof v === "string" || typeof v === "number") return String(v);
+        return v?.id || v?.value || "";
+      })
+    );
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    return uniqueStringIds([String(value)]);
+  }
+
+  return [];
+}
+
+async function nsGetRecord(envConfig, user, recordType, internalId) {
+  const url = `${envConfig.restUrl}/${recordType}/${internalId}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      ...getAuthHeader(url, "GET", user.tokenId, user.tokenSecret, envConfig),
+      "Content-Type": "application/json",
+    },
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    throw new Error(`GET ${recordType}/${internalId} failed: ${typeof data === "string" ? data : JSON.stringify(data)}`);
+  }
+
+  return data;
+}
+
+async function nsPatchRecord(envConfig, user, recordType, internalId, payload) {
+  const url = `${envConfig.restUrl}/${recordType}/${internalId}`;
+
+  console.log(`➡️ [NetSuite] PATCH ${url}`);
+  console.log("   Payload:", JSON.stringify(payload));
+
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: {
+      ...getAuthHeader(url, "PATCH", user.tokenId, user.tokenSecret, envConfig),
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    throw new Error(`PATCH ${recordType}/${internalId} failed: ${typeof data === "string" ? data : JSON.stringify(data)}`);
+  }
+
+  return data;
+}
+
+async function getInventoryItemInfo(envConfig, user, itemId) {
+  const data = await nsGetRecord(envConfig, user, "inventoryItem", itemId);
+
+  return {
+    internalid: String(itemId),
+    name:
+      data?.itemId ||
+      data?.itemid ||
+      data?.displayName ||
+      data?.displayname ||
+      data?.name ||
+      `Item ${itemId}`,
+  };
+}
+
+async function getChildInventoryItems(envConfig, user, parentItemId) {
+  const suiteQL = `
+    SELECT
+      id,
+      itemid
+    FROM item
+    WHERE parent = ${Number(parentItemId)}
+  `;
+
+  const suiteQLUrl = envConfig.restUrl.replace(/\/record\/v1$/i, "") + "/query/v1/suiteql";
+
+  const res = await fetch(suiteQLUrl, {
+    method: "POST",
+    headers: {
+      ...getAuthHeader(suiteQLUrl, "POST", user.tokenId, user.tokenSecret, envConfig),
+      "Content-Type": "application/json",
+      Prefer: "transient",
+    },
+    body: JSON.stringify({ q: suiteQL }),
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = text;
+  }
+
+  if (!res.ok) {
+    console.warn(`⚠️ Child search failed for parent ${parentItemId}:`, data);
+    return [];
+  }
+
+  return Array.isArray(data?.items)
+    ? data.items.map((row) => ({
+        internalid: String(row.id || "").trim(),
+        name: row.itemid || `Item ${row.id}`,
+      }))
+    : [];
+}
+
+async function patchInventoryItemFabricColours({
+  envConfig,
+  user,
+  itemId,
+  fabricColourId,
+  mode,
+}) {
+  const current = await nsGetRecord(envConfig, user, "inventoryItem", itemId);
+
+  const existing = normalizeNsMultiSelect(current?.custitem_sb_epos_fab_colours);
+  const targetId = String(fabricColourId);
+
+  let updated = [...existing];
+
+  if (mode === "add") {
+    if (!updated.includes(targetId)) updated.push(targetId);
+  } else if (mode === "remove") {
+    updated = updated.filter((id) => id !== targetId);
+  } else {
+    throw new Error(`Unsupported fabric colour patch mode: ${mode}`);
+  }
+
+  const changed =
+    existing.length !== updated.length ||
+    existing.some((id, idx) => id !== updated[idx]);
+
+  if (!changed) {
+    return {
+      changed: false,
+      before: existing,
+      after: updated,
+    };
+  }
+
+  const payload = {
+    custitem_sb_epos_fab_colours: {
+      items: updated.map((id) => ({ id: String(id) })),
+    },
+  };
+
+  await nsPatchRecord(envConfig, user, "inventoryItem", itemId, payload);
+
+  return {
+    changed: true,
+    before: existing,
+    after: updated,
+  };
+}
+
+app.get("/api/fabric-records/jobs", authMiddleware, (req, res) => {
+  try {
+    const visibleJobs = Object.entries(jobs)
+      .filter(([, job]) => job && job.type === "fabric-colour-sync")
+      .map(([jobId, job]) => ({
+        jobId,
+        label: job.label || "",
+        status: job.status || "pending",
+        progressMessage: job.progressMessage || "",
+        processed: job.processed || 0,
+        total: job.total || 0,
+        queuePos: Math.max(jobQueue.indexOf(jobId) + 1, 0),
+        queueTotal: jobQueue.length,
+        createdAt: job.createdAt || null,
+        finishedAt: job.finishedAt || null,
+      }))
+      .sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+
+    res.json({
+      success: true,
+      jobs: visibleJobs,
+    });
+  } catch (err) {
+    console.error("❌ Failed to load fabric sync jobs:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to load fabric sync jobs",
+      error: err.message,
+    });
+  }
+});
 
 
 /* -----------------------------
@@ -1311,11 +1722,44 @@ async function resolveItemRecordType(envConfig, user, internalId) {
 ////////////////////////////////////////////////////////////////////////
 
 async function processRow(row, { job, type, user, envConfig, environment }) {
-  // default result scaffold
   let rowResult = { status: "Pending", response: {} };
 
   try {
-    // --- Validation jobs ---
+    if (type === "fabric-colour-sync") {
+      rowResult = {
+        itemId: row.itemId,
+        itemName: row.itemName,
+        level: row.level,
+        mode: row.mode,
+        status: "Pending",
+        response: {},
+      };
+
+      if (!row.itemId || !row.fabricColourId) {
+        rowResult.status = "Skipped";
+        rowResult.response = { reason: "Missing itemId or fabricColourId" };
+        return rowResult;
+      }
+
+      if (row.level === "parent") {
+        job.progressMessage = `Updating parent ${row.itemName}`;
+      } else {
+        job.progressMessage = `Updating child ${row.itemName}`;
+      }
+
+      const patchResult = await patchInventoryItemFabricColours({
+        envConfig,
+        user,
+        itemId: row.itemId,
+        fabricColourId: row.fabricColourId,
+        mode: row.mode,
+      });
+
+      rowResult.status = patchResult.changed ? "Success" : "Skipped";
+      rowResult.response = patchResult;
+      return rowResult;
+    }
+
     if (type === "validation") {
       rowResult = { internalid: row.internalid, status: "Pending", response: null };
 
@@ -1354,7 +1798,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       return rowResult;
     }
 
-    // --- Promotion Push jobs ---
     if (type === "promotion-push") {
       rowResult = {
         id: row.id,
@@ -1367,7 +1810,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         const newSalePrice = parseFloat(row.salePrice);
         const newRegularPrice = parseFloat(row.basePrice || 0);
 
-        // ✅ NetSuite promo price via RESTlet (price level 4)
         if (Number.isFinite(newSalePrice)) {
           try {
             const nsPriceResult = await callPriceRestlet({
@@ -1394,7 +1836,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
           };
         }
 
-        // 🔄 WooCommerce sync
         try {
           const wooApi = getWooApi(environment);
 
@@ -1436,16 +1877,9 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         const nsFailed = !!rowResult.response.netsuite?.error;
         const wooFailed = !!rowResult.response.woocommerce?.error;
 
-        if (nsFailed || wooFailed) {
-          rowResult.status = "Error";
-        } else if (
-          rowResult.response.netsuite?.skipped &&
-          rowResult.response.woocommerce?.skipped
-        ) {
-          rowResult.status = "Skipped";
-        } else {
-          rowResult.status = "Success";
-        }
+        if (nsFailed || wooFailed) rowResult.status = "Error";
+        else if (rowResult.response.netsuite?.skipped && rowResult.response.woocommerce?.skipped) rowResult.status = "Skipped";
+        else rowResult.status = "Success";
       } catch (err) {
         rowResult.status = "Error";
         rowResult.response = { error: String(err) };
@@ -1455,7 +1889,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       return rowResult;
     }
 
-    // --- Default ProductData jobs ---
     rowResult = {
       itemId: row["Item ID"],
       status: "Pending",
@@ -1468,7 +1901,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       return rowResult;
     }
 
-    // ✅ Resolve record type ONCE (inventoryItem vs serviceSaleItem etc.)
     const internalId = String(row["Internal ID"]).trim();
     const recordType = await resolveItemRecordType(envConfig, user, internalId);
     console.log(`🧭 Resolved record type: ${internalId} -> ${recordType}`);
@@ -1477,20 +1909,16 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
     let basePriceVal;
 
     for (const field of fieldMap) {
-      // ✅ Skip fields that do not map to a NetSuite internal id
-      // except special handlers below
       if (!field.internalid && field.name !== "Base Price" && field.name !== "Preferred Supplier") {
         continue;
       }
 
-      // --- Base Price handled separately via RESTlet ---
       if (field.name === "Base Price") {
         const val = parseFloat(row[field.name]);
         if (!isNaN(val)) basePriceVal = val;
         continue;
       }
 
-      // --- Multiple Select ---
       if (field.fieldType === "multiple-select") {
         const ids = row[`${field.name}_InternalId`];
         if (Array.isArray(ids) && field.internalid) {
@@ -1501,13 +1929,11 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         continue;
       }
 
-      // --- Preferred Supplier ---
       if (field.name === "Preferred Supplier") {
         const newVendorId = row[`${field.name}_InternalId`] ?? null;
 
         if (newVendorId) {
           try {
-            // ⚠️ Vendors only exist on inventory items; skip if this is a service item
             if (recordType !== "inventoryItem") {
               console.log(`↪️ Skipping Preferred Supplier for recordType=${recordType}`);
               continue;
@@ -1576,21 +2002,15 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         continue;
       }
 
-      // --- List/Record ---
       if (field.fieldType === "List/Record") {
         const internalIdValue = row[`${field.name}_InternalId`] ?? null;
 
-        if (
-          field.internalid &&
-          internalIdValue !== null &&
-          internalIdValue !== ""
-        ) {
+        if (field.internalid && internalIdValue !== null && internalIdValue !== "") {
           payload[field.internalid] = { id: String(internalIdValue) };
         }
         continue;
       }
 
-      // --- Images ---
       if (field.fieldType === "image") {
         const fileId = row[`${field.name}_InternalId`];
 
@@ -1624,7 +2044,6 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         continue;
       }
 
-      // --- Standard field mapping ---
       const value = row[field.name];
       if (
         value !== undefined &&
@@ -1674,42 +2093,40 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       console.log("⬅️ [NetSuite] Response:", rowResult.response.main);
     }
 
-// ✅ Base Price via RESTlet
-if (basePriceVal !== undefined) {
-  try {
-    const priceResult = await callPriceRestlet({
-      environment,
-      envConfig,
-      user,
-      internalId,
-      recordType,
-      price: basePriceVal,
-      priceLevelId: 1,
-      currencyId: 1,
-      quantityColumns: [0, 1],
-    });
+    if (basePriceVal !== undefined) {
+      try {
+        const priceResult = await callPriceRestlet({
+          environment,
+          envConfig,
+          user,
+          internalId,
+          recordType,
+          price: basePriceVal,
+          priceLevelId: 1,
+          currencyId: 1,
+          quantityColumns: [0, 1],
+        });
 
-    rowResult.response.prices.push({
-      success: true,
-      recordType,
-      internalId,
-      newValue: basePriceVal,
-      result: priceResult,
-    });
-  } catch (priceErr) {
-    rowResult.response.prices.push({
-      success: false,
-      recordType,
-      internalId,
-      newValue: basePriceVal,
-      error: priceErr.message,
-    });
+        rowResult.response.prices.push({
+          success: true,
+          recordType,
+          internalId,
+          newValue: basePriceVal,
+          result: priceResult,
+        });
+      } catch (priceErr) {
+        rowResult.response.prices.push({
+          success: false,
+          recordType,
+          internalId,
+          newValue: basePriceVal,
+          error: priceErr.message,
+        });
 
-    console.error("❌ Base Price RESTlet update failed:", priceErr.message);
-  }
-}
+        console.error("❌ Base Price RESTlet update failed:", priceErr.message);
+      }
+    }
 
-    // ✅ Final status logic
     const mainFailed =
       !!rowResult.response.error ||
       !!(rowResult.response.main && rowResult.response.main.error);
@@ -1757,15 +2174,20 @@ async function runNextJob() {
   const results = [];
   const { rows, user, envConfig, environment, type } = job;
 
+  if (type === "fabric-colour-sync") {
+    job.progressMessage = "Updating fabric record";
+  }
+
   console.log(`\n🌐 Environment: ${environment} (${envConfig.accountDash}) | 👤 User: ${user.username} | 🧾 Records: ${rows.length}`);
 
   let rowIndex = 0;
+
   async function worker(workerId) {
     while (true) {
       const i = rowIndex++;
       if (i >= rows.length) return;
       const row = rows[i];
-      if (!jobs[jobId]) return; // cancelled mid-run
+      if (!jobs[jobId]) return;
 
       const rowResult = await processRow(row, { job, type, user, envConfig, environment });
       results.push(rowResult);
@@ -1773,21 +2195,22 @@ async function runNextJob() {
     }
   }
 
-  const workers = Array.from({ length: MAX_CONCURRENT }, (_, i) => worker(i));
+  const workerCount = type === "fabric-colour-sync" ? 1 : MAX_CONCURRENT;
+  const workers = Array.from({ length: workerCount }, (_, i) => worker(i));
   await Promise.all(workers);
 
   job.results = results;
   job.status = "completed";
+  job.progressMessage = "Completed";
   job.finishedAt = new Date();
   jobQueue.shift();
 
-  const successCount = results.filter(r => r.status === "Success").length;
-  const errorCount = results.filter(r => r.status === "Error").length;
-  const skippedCount = results.filter(r => r.status === "Skipped").length;
+  const successCount = results.filter((r) => r.status === "Success").length;
+  const errorCount = results.filter((r) => r.status === "Error").length;
+  const skippedCount = results.filter((r) => r.status === "Skipped").length;
 
   console.log(`\n📊 Job Summary: ✅ ${successCount} | ❌ ${errorCount} | ⚠️ ${skippedCount}\n`);
 
-  // ✅ Perform cleanup BEFORE starting the next job
   if (job.type === "historical-pricing") {
     if (job.originalFilePath) {
       console.log(`🧹 Attempting to delete processed historical file: ${job.originalFilePath}`);
@@ -1807,7 +2230,6 @@ async function runNextJob() {
     }
   }
 
-  // ✅ Now safely run the next job in sequence
   await runNextJob();
 }
 

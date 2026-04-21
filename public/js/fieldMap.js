@@ -44,6 +44,10 @@ const mapenvironment = [
     name: "Reasons To Buy",
     SandboxUrl :"https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4399&deploy=1&compid=7972741&ns-at=AAEJ7tMQshIS5msG7CoaDtoEGWXc55kRX059TX6GCiAUJeBu248",
     ProdUrl : "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4399&deploy=1&compid=7972741&ns-at=AAEJ7tMQshIS5msG7CoaDtoEGWXc55kRX059TX6GCiAUJeBu248"
+  },
+  {
+    name: "Epos Fabric Colours",
+    ProdUrl: "https://7972741.extforms.netsuite.com/app/site/hosting/scriptlet.nl?script=4519&deploy=1&compid=7972741&ns-at=AAEJ7tMQx1il7XmlrmBP3OnEFOcOaQ3fBQP5LRSYMiDumyAXS4c"
   }
 ];
 
@@ -87,6 +91,7 @@ export const fieldMap = [
   { name: "NS record", internalid: "nsrecord", fieldType: "Link", disableField: true },
   {name: "Record Type", internalid:"type ", fieldType: "Free-Form Text", disableField: true},
   {name: "Size", disableField: true},
+  {name: "Fabric / Colours", internalid: "custitem_sb_epos_fab_colours", fieldType: "multiple-select", jsonFeed: urlFor("Epos Fabric Colours")},
   ///////////////////////
   /* WEB FIELD MAPPING */
   ////////////////////

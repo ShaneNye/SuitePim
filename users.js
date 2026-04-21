@@ -116,7 +116,7 @@ export const users = [
     },
     {
         username : "Fay Hodson",
-        sandbox_tokenId: "blender4life",
+        password: "blender4life",
         sandbox_tokenSecret: "",
         prod_tokenId: "3122393c69fcf2a360d227aaf21b97f8fae1c040347fbd0d03aebcf70acb082f",
         prod_tokenSecret: "018093be70f2a644a80f0ee21e4d5c4661d0de3363d85e83102d89ed1504d02a"
