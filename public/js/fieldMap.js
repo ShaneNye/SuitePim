@@ -80,6 +80,7 @@ export const fieldMap = [
   { name: "Name", internalid: "itemid", fieldType: "Free-Form Text"},
   { name: "Display Name", internalid: "displayname", fieldType: "Free-Form Text" },
   { name: "Supplier Name", internalid: "vendorname", fieldType: "Free-Form Text" },
+  { name: "Supplier SKU", internalid: "custitem_sb_supplier_sku", fieldType: "Free-Form Text"},
   { name: "Class", internalid: "class", fieldType: "List/Record", jsonFeed: urlFor("Class") },
   { name: "Purchase Price", internalid: "cost", fieldType: "Currency" },
   { name: "Base Price", internalid: "price", fieldType: "Currency" },
