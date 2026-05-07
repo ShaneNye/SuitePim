@@ -1907,6 +1907,9 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
 
     const payload = {};
     let basePriceVal;
+    const changedFields = Array.isArray(row._changedFields)
+      ? new Set(row._changedFields.map(String))
+      : new Set();
 
     for (const field of fieldMap) {
       if (!field.internalid && field.name !== "Base Price" && field.name !== "Preferred Supplier") {
@@ -2048,7 +2051,13 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
       if (
         value !== undefined &&
         value !== null &&
-        !(typeof value === "string" && value.trim() === "")
+        (
+          !(typeof value === "string" && value.trim() === "") ||
+          (
+            changedFields.has(field.name) &&
+            ["Free-Form Text", "rich-text"].includes(field.fieldType)
+          )
+        )
       ) {
         if (!field.internalid) continue;
 
@@ -2088,6 +2097,11 @@ async function processRow(row, { job, type, user, envConfig, environment }) {
         rowResult.response.main = text ? JSON.parse(text) : { status: "No Content (204)" };
       } catch {
         rowResult.response.main = text || { status: "No Content (204)" };
+      }
+
+      if (!response.ok) {
+        rowResult.response.error = `NetSuite PATCH failed (${response.status} ${response.statusText})`;
+        rowResult.response.httpStatus = response.status;
       }
 
       console.log("⬅️ [NetSuite] Response:", rowResult.response.main);

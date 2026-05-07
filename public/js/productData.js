@@ -1817,6 +1817,7 @@ async function displayJSONTable(data, opts = { showBusy: false }) {
             textarea.style.resize = "none";
             textarea.addEventListener("input", () => {
               rowData[col] = textarea.value;
+              td.dataset.changed = "true";
               rowCheckbox.checked = true;
               highlightRow(rowCheckbox);
             });
@@ -2014,11 +2015,13 @@ async function pushUpdates() {
     if (!checkbox || !checkbox.checked) return;
 
     const rowData = {};
+    const changedFields = new Set();
     displayedColumns.forEach((col, colIdx) => {
       const td = row.children[colIdx + 1];
       if (!td) return;
 
       const field = fieldMap.find((f) => f.name === col);
+      if (td.dataset.changed === "true") changedFields.add(col);
 
       if (field && field.fieldType === "List/Record") {
         const select = td.querySelector("select");
@@ -2056,6 +2059,7 @@ async function pushUpdates() {
       }
     });
 
+    rowData._changedFields = [...changedFields];
     rowsToPush.push(rowData);
   });
 
