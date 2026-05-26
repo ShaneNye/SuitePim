@@ -1605,7 +1605,65 @@
           ]
         }
       ]
+    },
+    {
+      "label": "Nest range",
+      "color": "rgba(0, 0, 0, 0.2)",
+      "rows": [
+        {
+          "label": "Nest Cloud",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nest cloud"
+            }
+          ]
+        },
+        {
+          "label": "Nest Essence",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nest essence"
+            }
+          ]
+        },
+        {
+          "label": "Nest Ortho",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nest ortho"
+            }
+          ]
+        },
+        {
+          "label": "Nest Support",
+          "discount": "25",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "nest support"
+            }
+          ]
+        }
+      ]
     }
   ],
-  "savedAt": "2026-05-26T14:25:24.109Z"
+  "savedAt": "2026-05-26T14:48:17.280Z"
 }
