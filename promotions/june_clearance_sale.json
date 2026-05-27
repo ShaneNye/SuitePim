@@ -1661,9 +1661,44 @@
               "value": "nest support"
             }
           ]
+        },
+        {
+          "label": "",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
+        }
+      ]
+    },
+    {
+      "label": "Birlea frames",
+      "color": "",
+      "rows": [
+        {
+          "label": "Bed Frames",
+          "discount": "45",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Preferred Supplier",
+              "value": "1249"
+            }
+          ]
+        },
+        {
+          "label": "",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": []
         }
       ]
     }
   ],
-  "savedAt": "2026-05-26T14:48:17.280Z"
+  "savedAt": "2026-05-27T15:05:25.778Z"
 }
