@@ -1674,10 +1674,10 @@
     },
     {
       "label": "Birlea frames",
-      "color": "",
+      "color": "rgba(240, 142, 142, 0.2)",
       "rows": [
         {
-          "label": "Bed Frames",
+          "label": "Birlea Frames",
           "discount": "45",
           "pos": "",
           "discPos": "",
@@ -1686,19 +1686,18 @@
             {
               "field": "Preferred Supplier",
               "value": "1249"
+            },
+            {
+              "field": "Category",
+              "ids": [
+                "2"
+              ],
+              "mode": "any"
             }
           ]
-        },
-        {
-          "label": "",
-          "discount": "",
-          "pos": "",
-          "discPos": "",
-          "other": "",
-          "filters": []
         }
       ]
     }
   ],
-  "savedAt": "2026-05-27T15:05:25.778Z"
+  "savedAt": "2026-05-27T15:36:23.956Z"
 }
