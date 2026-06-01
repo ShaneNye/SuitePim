@@ -7,22 +7,19 @@
       "rows": [
         {
           "label": "Nova Divan Base",
-          "discount": "5",
+          "discount": "20",
           "pos": "",
           "discPos": "",
           "other": "",
           "filters": [
             {
-              "field": "Category",
-              "ids": [
-                "101"
-              ],
-              "mode": "any"
+              "field": "Name",
+              "value": "Allington"
             }
           ]
         }
       ]
     }
   ],
-  "savedAt": "2026-02-18T13:01:36.967Z"
+  "savedAt": "2026-06-01T07:47:34.919Z"
 }
