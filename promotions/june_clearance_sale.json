@@ -1603,6 +1603,19 @@
               "value": "True edge 1000 base :"
             }
           ]
+        },
+        {
+          "label": "echo",
+          "discount": "",
+          "pos": "",
+          "discPos": "",
+          "other": "",
+          "filters": [
+            {
+              "field": "Name",
+              "value": "echo divan base :"
+            }
+          ]
         }
       ]
     },
@@ -1691,5 +1704,5 @@
       ]
     }
   ],
-  "savedAt": "2026-06-02T13:56:45.763Z"
+  "savedAt": "2026-06-02T14:24:53.079Z"
 }
