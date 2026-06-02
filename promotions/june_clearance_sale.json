@@ -1661,14 +1661,6 @@
               "value": "nest support"
             }
           ]
-        },
-        {
-          "label": "",
-          "discount": "",
-          "pos": "",
-          "discPos": "",
-          "other": "",
-          "filters": []
         }
       ]
     },
@@ -1699,5 +1691,5 @@
       ]
     }
   ],
-  "savedAt": "2026-06-02T08:36:59.898Z"
+  "savedAt": "2026-06-02T10:55:11.398Z"
 }
