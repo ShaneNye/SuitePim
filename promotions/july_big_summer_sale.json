@@ -1237,7 +1237,7 @@
         },
         {
           "label": "Nature",
-          "discount": "20",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1250,7 +1250,7 @@
         },
         {
           "label": "Aura",
-          "discount": "20",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1263,7 +1263,7 @@
         },
         {
           "label": "Nova",
-          "discount": "20",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1276,7 +1276,7 @@
         },
         {
           "label": "Quantum",
-          "discount": "20",
+          "discount": "25",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1289,7 +1289,7 @@
         },
         {
           "label": "True edge",
-          "discount": "20",
+          "discount": "25",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1302,7 +1302,7 @@
         },
         {
           "label": "echo",
-          "discount": "25",
+          "discount": "0",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1321,7 +1321,7 @@
       "rows": [
         {
           "label": "Nest Cloud",
-          "discount": "25",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1334,7 +1334,7 @@
         },
         {
           "label": "Nest Essence",
-          "discount": "25",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1347,7 +1347,7 @@
         },
         {
           "label": "Nest Ortho",
-          "discount": "25",
+          "discount": "42",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1360,7 +1360,7 @@
         },
         {
           "label": "Nest Support",
-          "discount": "25",
+          "discount": "30",
           "pos": "",
           "discPos": "",
           "other": "",
@@ -1372,33 +1372,7 @@
           ]
         }
       ]
-    },
-    {
-      "label": "Birlea frames",
-      "color": "rgba(240, 142, 142, 0.2)",
-      "rows": [
-        {
-          "label": "Birlea Frames",
-          "discount": "45",
-          "pos": "",
-          "discPos": "",
-          "other": "",
-          "filters": [
-            {
-              "field": "Preferred Supplier",
-              "value": "1249"
-            },
-            {
-              "field": "Category",
-              "ids": [
-                "2"
-              ],
-              "mode": "any"
-            }
-          ]
-        }
-      ]
     }
   ],
-  "savedAt": "2026-06-22T15:07:31.269Z"
+  "savedAt": "2026-06-22T15:17:24.622Z"
 }
